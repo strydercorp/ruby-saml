@@ -1,6 +1,3 @@
-require "rexml/document"
-require "xml_sec" 
-
 module Onelogin::Saml
   class Response
     def initialize(response)

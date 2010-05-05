@@ -1,10 +1,8 @@
-require "base64"
-
 module Onelogin::Saml
-  class Authrequest
+  class AuthRequest
     def create(settings)
-      id                = Onelogin::Saml::Authrequest.generateUniqueID(42)
-      issue_instant     = Onelogin::Saml::Authrequest.getTimestamp
+      id                = Onelogin::Saml::AuthRequest.generate_unique_id(42)
+      issue_instant     = Onelogin::Saml::AuthRequest.get_timestamp
 
       request = 
         "<samlp:AuthnRequest xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" ID=\"#{id}\" Version=\"2.0\" IssueInstant=\"#{issue_instant}\" ProtocolBinding=\"urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST\" AssertionConsumerServiceURL=\"#{settings.assertion_consumer_service_url}\">" +
@@ -23,7 +21,7 @@ module Onelogin::Saml
     
     private 
     
-    def self.generateUniqueID(length)
+    def self.generate_unique_id(length)
       chars = ("a".."f").to_a + ("0".."9").to_a
       chars_len = chars.size
       uniqueID = ""
@@ -31,7 +29,7 @@ module Onelogin::Saml
       uniqueID
     end
     
-    def self.getTimestamp
+    def self.get_timestamp
       Time.new().strftime("%Y-%m-%dT%H:%M:%SZ")
     end
   end
