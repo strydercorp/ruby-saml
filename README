@@ -1,0 +1,7 @@
+== SAML toolkit for Ruby on Rails
+
+Documentation from onelogin: http://support.onelogin.com/entries/165434-saml-toolkit-for-ruby-on-rails
+
+The example folder has a rails 2.3.5 example application.
+
+A Gem will eventually be created.
