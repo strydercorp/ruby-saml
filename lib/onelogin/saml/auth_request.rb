@@ -1,6 +1,6 @@
 module Onelogin::Saml
   class AuthRequest
-    def create(settings)
+    def self.create(settings)
       id                = Onelogin::Saml::AuthRequest.generate_unique_id(42)
       issue_instant     = Onelogin::Saml::AuthRequest.get_timestamp
 
@@ -24,9 +24,9 @@ module Onelogin::Saml
     def self.generate_unique_id(length)
       chars = ("a".."f").to_a + ("0".."9").to_a
       chars_len = chars.size
-      uniqueID = ""
-      1.upto(length) { |i| uniqueID << chars[rand(chars_len-1)] }
-      uniqueID
+      unique_id = ""
+      1.upto(length) { |i| unique_id << chars[rand(chars_len-1)] }
+      unique_id
     end
     
     def self.get_timestamp

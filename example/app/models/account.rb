@@ -7,12 +7,19 @@ class Account < ActiveRecord::Base
     # should retrieve SAML-settings based on subdomain, IP-address, NameID or similar
     settings = Onelogin::Saml::Settings.new
     
-    settings.assertion_consumer_service_url   = "http://localhost:3008/sessions/complete"
-    settings.issuer                           = "mysaasapp.com" # the name of your application
+    settings.assertion_consumer_service_url   = "http://localhost:3008/saml/consume"
+    settings.issuer                           = "example.com" # the name of your application
     settings.idp_sso_target_url               = "http://app.localhost:3000/saml/signon/3763"
+    settings.idp_slo_target_url               = "http://app.localhost:3000/saml/logout/3763"
     settings.idp_cert_fingerprint             = "90:CC:16:F0:8D:A6:D1:C6:BB:27:2D:BA:93:80:1A:1F:16:8E:4E:08"
-    settings.name_identifier_format           = "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
-
+    settings.name_identifier_format           = Onelogin::Saml::NameIdentifiers::EMAIL
+    
+    # for meta data
+    settings.sp_assertion_consumer_url = "http://localhost:3008/saml/consume" 
+    settings.sp_slo_url = "http://localhost:3008/saml/logout"
+    settings.tech_contact_name = "Administrator"
+    settings.tech_contact_email = "admin@example.com"
+    
     settings
-  end
+  end  
 end

@@ -8,8 +8,8 @@ class SamlController < ApplicationController
   
   def login
     settings = Account.get_saml_settings
-    request = Onelogin::Saml::AuthRequest.new
-    redirect_to(request.create(settings))
+    request = Onelogin::Saml::AuthRequest.create(settings)
+    redirect_to(request)
   end
 
   def consume
@@ -42,6 +42,11 @@ class SamlController < ApplicationController
     else
       redirect_to :action => :index
     end
+  end
+  
+  def metadata
+    settings = Account.get_saml_settings
+    render :xml => Onelogin::Saml::MetaData.create(settings)
   end
 
 end

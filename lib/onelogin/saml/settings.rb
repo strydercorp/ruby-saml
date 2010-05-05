@@ -1,45 +1,48 @@
 module Onelogin::Saml
   class Settings
-    def assertion_consumer_service_url
-      @assertion_consumer_service_url
-    end
-    def assertion_consumer_service_url=(val)
-      @assertion_consumer_service_url = val
+    
+    def initialize(atts={})
+      atts.each do |key, val|
+        if self.respond_to? "#{key}="
+          self.send "#{key}=", val
+        end
+      end
     end
     
-    def issuer
-      @issuer
-    end
-    def issuer=(val)
-      @issuer = val
-    end
+    # The URL at which the SAML assertion should be received.
+    attr_accessor :assertion_consumer_service_url
     
-    def sp_name_qualifier
-      @sp_name_qualifier
-    end
-    def sp_name_qualifier=(val)
-      @sp_name_qualifier = val
-    end
+    # The name of your application.
+    attr_accessor :issuer
     
-    def idp_sso_target_url
-      @idp_sso_target_url
-    end
-    def idp_sso_target_url=(val)
-      @idp_sso_target_url = val
-    end
+    # 
+    attr_accessor :sp_name_qualifier
     
-    def idp_cert_fingerprint
-      @idp_cert_fingerprint
-    end
-    def idp_cert_fingerprint=(val)
-      @idp_cert_fingerprint = val
-    end
+    # The IdP URL to which the authentication request should be sent.
+    attr_accessor :idp_sso_target_url
     
-    def name_identifier_format
-      @name_identifier_format
-    end
-    def name_identifier_format=(val)
-      @name_identifier_format = val
-    end
+    # The IdP URL to which the logout request should be sent.
+    attr_accessor :idp_slo_target_url
+    
+    # The certificate fingerprint. This is provided from the identity provider when setting up the relationship.
+    attr_accessor :idp_cert_fingerprint
+    
+    # Describes the format of the username required by this application.
+    # For email: Onelogin::Saml::NameIdentifiers::EMAIL
+    attr_accessor :name_identifier_format
+    
+    ## Attributes for the metadata
+    
+    # The consumer url of your application
+    attr_accessor :sp_assertion_consumer_url
+    
+    # The logout url of your application
+    attr_accessor :sp_slo_url
+    
+    # The name of the technical contact for your application 
+    attr_accessor :tech_contact_name
+    
+    # The email of the technical contact for your application
+    attr_accessor :tech_contact_email
   end
 end
