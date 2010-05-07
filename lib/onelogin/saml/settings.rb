@@ -33,9 +33,6 @@ module Onelogin::Saml
     
     ## Attributes for the metadata
     
-    # The consumer url of your application
-    attr_accessor :sp_assertion_consumer_url
-    
     # The logout url of your application
     attr_accessor :sp_slo_url
     

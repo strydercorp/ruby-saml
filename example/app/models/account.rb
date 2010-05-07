@@ -15,7 +15,6 @@ class Account < ActiveRecord::Base
     settings.name_identifier_format           = Onelogin::Saml::NameIdentifiers::EMAIL
     
     # for meta data
-    settings.sp_assertion_consumer_url = "http://localhost:3008/saml/consume" 
     settings.sp_slo_url = "http://localhost:3008/saml/logout"
     settings.tech_contact_name = "Administrator"
     settings.tech_contact_email = "admin@example.com"
