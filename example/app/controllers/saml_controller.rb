@@ -19,11 +19,20 @@ class SamlController < ApplicationController
     logger.info "NAMEID: #{response.name_id}"
 
     if response.is_valid?
-      session[:name_id] = response.name_id
-      session[:name_qualifier] = response.name_qualifier
-      session[:session_index] = response.session_index
-      redirect_to :action => :complete
+      if response.success_status?
+        session[:name_id] = response.name_id
+        session[:name_qualifier] = response.name_qualifier
+        session[:session_index] = response.session_index
+        redirect_to :action => :complete
+      elsif response.auth_failure?
+        flash[:notice] = "Authentication failure at the identity provider"
+        redirect_to :action => :fail
+      else
+        flash[:notice] = "Status code: #{response.status_code rescue ""}"
+        redirect_to :action => :fail
+      end
     else
+      flash[:notice] = "The response from the identity provider couldn't be validated"
       redirect_to :action => :fail
     end
   end
