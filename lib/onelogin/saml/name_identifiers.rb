@@ -9,5 +9,7 @@ module Onelogin::Saml
     UNSPECIFIED = "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"
     WINDOWS_DOMAIN = "urn:oasis:names:tc:SAML:1.1:nameid-format:WindowsDomainQualifiedName"
     X509 = "urn:oasis:names:tc:SAML:1.1:nameid-format:X509SubjectName"
+    
+    ALL_IDENTIFIERS = [EMAIL, ENTITY, KERBEROS, PERSISTENT, TRANSIENT, UNSPECIFIED, WINDOWS_DOMAIN, X509]
   end
 end
