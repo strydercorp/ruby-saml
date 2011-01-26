@@ -1,8 +1,0 @@
-<% if session[:name_id] %>
-    <p>You are logged in as <%= session[:name_id] %></p>
-    <p><%= link_to "Logout", :action=>"logout"%></p>
-    <% else %>
-    <h3>Please login</h3>
-
-    <%= link_to "&#171; login", :action=>"login" %>
-<% end %>
