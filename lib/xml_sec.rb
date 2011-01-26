@@ -52,18 +52,18 @@ module XMLSecurity
       # validate references
       
       # remove signature node
-      sig_element = XPath.first(self, "//ds:Signature", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"})
+      sig_element = REXML::XPath.first(self, "//ds:Signature", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"})
       sig_element.remove
       
       #check digests
-      XPath.each(sig_element, "//ds:Reference", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"}) do | ref |          
+      REXML::XPath.each(sig_element, "//ds:Reference", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"}) do | ref |          
         
         uri                   = ref.attributes.get_attribute("URI").value
-        hashed_element        = XPath.first(self, "//[@ID='#{uri[1,uri.size]}']")
+        hashed_element        = REXML::XPath.first(self, "//[@ID='#{uri[1,uri.size]}']")
         canoner               = XML::Util::XmlCanonicalizer.new(false, true)
         canon_hashed_element  = canoner.canonicalize(hashed_element)
         hash                  = Base64.encode64(Digest::SHA1.digest(canon_hashed_element)).chomp
-        digest_value          = XPath.first(ref, "//ds:DigestValue", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"}).text
+        digest_value          = REXML::XPath.first(ref, "//ds:DigestValue", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"}).text
         
         valid_flag            = hash == digest_value 
         
@@ -72,10 +72,10 @@ module XMLSecurity
  
       # verify signature
       canoner                 = XML::Util::XmlCanonicalizer.new(false, true)
-      signed_info_element     = XPath.first(sig_element, "//ds:SignedInfo", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"})
+      signed_info_element     = REXML::XPath.first(sig_element, "//ds:SignedInfo", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"})
       canon_string            = canoner.canonicalize(signed_info_element)
 
-      base64_signature        = XPath.first(sig_element, "//ds:SignatureValue", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"}).text
+      base64_signature        = REXML::XPath.first(sig_element, "//ds:SignatureValue", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"}).text
       signature               = Base64.decode64(base64_signature)
       
       # get certificate object
