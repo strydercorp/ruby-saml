@@ -12,6 +12,12 @@ module Onelogin::Saml
       @session_index = @document.elements["/samlp:Response/saml:Assertion/saml:AuthnStatement"].attributes["SessionIndex"] rescue nil
       @status_code = @document.elements["/samlp:Response/samlp:Status/samlp:StatusCode"].attributes["Value"] rescue nil
       @status_message = @document.elements["/samlp:Response/samlp:Status/samlp:StatusCode"].text rescue nil
+      # look for saml2 and saml2p tags in Shibboleth assertions
+      @name_id ||= @document.elements["/saml2p:Response/saml2:Assertion/saml2:Subject/saml2:NameID"].text rescue nil
+      @name_qualifier ||= @document.elements["/saml2p:Response/saml2:Assertion/saml2:Subject/saml2:NameID"].attributes["NameQualifier"] rescue nil
+      @session_index ||= @document.elements["/saml2p:Response/saml2:Assertion/saml2:AuthnStatement"].attributes["SessionIndex"] rescue nil
+      @status_code ||= @document.elements["/saml2p:Response/saml2p:Status/saml2p:StatusCode"].attributes["Value"] rescue nil
+      @status_message ||= @document.elements["/saml2p:Response/saml2p:Status/saml2p:StatusCode"].text rescue nil     
     end
     
     def logger=(val)
