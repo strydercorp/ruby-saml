@@ -30,7 +30,7 @@ module Onelogin::Saml
     end
     
     def self.get_timestamp
-      Time.new().strftime("%Y-%m-%dT%H:%M:%SZ")
+      Time.new.utc.strftime("%Y-%m-%dT%H:%M:%SZ")
     end
   end
 end
