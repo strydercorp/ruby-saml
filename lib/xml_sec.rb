@@ -28,6 +28,8 @@ require "rexml/xpath"
 require "openssl"
 require "xmlcanonicalizer"
 require "digest/sha1"
+require "tempfile"
+require "shellwords"
  
 module XMLSecurity
 
@@ -86,6 +88,28 @@ module XMLSecurity
         
       return valid_flag
     end
-   
+
+    def decrypt(settings)
+      if settings.encryption_configured?
+        REXML::XPath.each(self, "//xenc:EncryptedData", Onelogin::NAMESPACES) do |node|
+          Tempfile.open("ruby-saml-decrypt") do |f|
+            f.puts node.to_s
+            f.close
+            command = [ settings.xmlsec1_path, "decrypt", "--privkey-pem", settings.xmlsec_privatekey, f.path ].shelljoin
+            decrypted_xml = %x{#{command}}
+            if $?.exitstatus != 0
+              @logger.warn "Could not decrypt: #{decrypted_xml}" if @logger
+              return false
+            else
+              decrypted_doc = REXML::Document.new(decrypted_xml)
+              decrypted_node = decrypted_doc.root
+              node.parent.replace_with(decrypted_node)
+            end
+            f.unlink
+          end
+        end
+      end
+      true
+    end
   end
 end
