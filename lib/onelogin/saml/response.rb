@@ -1,23 +1,22 @@
 module Onelogin::Saml
   class Response
     
-    attr_accessor :settings, :document, :response
+    attr_accessor :settings, :document, :xml, :response
     attr_accessor :name_id, :name_qualifier, :session_index
     attr_accessor :status_code, :status_message
-    def initialize(response)
+    def initialize(response, settings)
       @response = response
-      @document = XMLSecurity::SignedDocument.new(Base64.decode64(@response))
-      @name_id = @document.elements["/samlp:Response/saml:Assertion/saml:Subject/saml:NameID"].text rescue nil
-      @name_qualifier = @document.elements["/samlp:Response/saml:Assertion/saml:Subject/saml:NameID"].attributes["NameQualifier"] rescue nil
-      @session_index = @document.elements["/samlp:Response/saml:Assertion/saml:AuthnStatement"].attributes["SessionIndex"] rescue nil
-      @status_code = @document.elements["/samlp:Response/samlp:Status/samlp:StatusCode"].attributes["Value"] rescue nil
-      @status_message = @document.elements["/samlp:Response/samlp:Status/samlp:StatusCode"].text rescue nil
-      # look for saml2 and saml2p tags in Shibboleth assertions
-      @name_id ||= @document.elements["/saml2p:Response/saml2:Assertion/saml2:Subject/saml2:NameID"].text rescue nil
-      @name_qualifier ||= @document.elements["/saml2p:Response/saml2:Assertion/saml2:Subject/saml2:NameID"].attributes["NameQualifier"] rescue nil
-      @session_index ||= @document.elements["/saml2p:Response/saml2:Assertion/saml2:AuthnStatement"].attributes["SessionIndex"] rescue nil
-      @status_code ||= @document.elements["/saml2p:Response/saml2p:Status/saml2p:StatusCode"].attributes["Value"] rescue nil
-      @status_message ||= @document.elements["/saml2p:Response/saml2p:Status/saml2p:StatusCode"].text rescue nil     
+      @settings = settings
+      
+      @xml = Base64.decode64(@response)
+      @document = XMLSecurity::SignedDocument.new(@xml)
+      @document.decrypt(@settings)
+      
+      @name_id = REXML::XPath.first(@document, "/samlp:Response/saml:Assertion/saml:Subject/saml:NameID", Onelogin::NAMESPACES).text rescue nil
+      @name_qualifier = REXML::XPath.first(@document, "/samlp:Response/saml:Assertion/saml:Subject/saml:NameID", Onelogin::NAMESPACES).attributes["NameQualifier"] rescue nil
+      @session_index = REXML::XPath.first(@document, "/samlp:Response/saml:Assertion/saml:AuthnStatement", Onelogin::NAMESPACES).attributes["SessionIndex"] rescue nil
+      @status_code = REXML::XPath.first(@document, "/samlp:Response/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES).attributes["Value"] rescue nil
+      @status_message = REXML::XPath.first(@document, "/samlp:Response/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES).text rescue nil
     end
     
     def logger=(val)

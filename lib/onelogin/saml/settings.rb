@@ -41,5 +41,20 @@ module Onelogin::Saml
     
     # The email of the technical contact for your application
     attr_accessor :tech_contact_email
+    
+    ## Attributes for xml encryption
+    
+    # The path to the xmlsec1 binary used for xml decryption
+    attr_accessor :xmlsec1_path
+    
+    # The PEM-encoded certificate
+    attr_accessor :xmlsec_certificate
+    
+    # The PEM-encoded private key
+    attr_accessor :xmlsec_privatekey
+    
+    def encryption_configured?
+      self.xmlsec1_path && self.xmlsec_certificate && self.xmlsec_privatekey
+    end
   end
 end
