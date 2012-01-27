@@ -31,6 +31,9 @@ module Onelogin::Saml
     # For email: Onelogin::Saml::NameIdentifiers::EMAIL
     attr_accessor :name_identifier_format
     
+    # The type of authentication requested (see Onelogin::Saml::AuthnContexts)
+    attr_accessor :requested_authn_context
+    
     ## Attributes for the metadata
     
     # The logout url of your application

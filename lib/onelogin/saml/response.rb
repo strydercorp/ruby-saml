@@ -36,5 +36,9 @@ module Onelogin::Saml
     def auth_failure?
       @status_code == Onelogin::Saml::StatusCodes::AUTHN_FAILED_URI
     end
+    
+    def no_authn_context?
+      @status_code == Onelogin::Saml::StatusCodes::NO_AUTHN_CONTEXT_URI
+    end
   end
 end

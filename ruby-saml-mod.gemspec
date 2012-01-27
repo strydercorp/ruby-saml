@@ -1,9 +1,9 @@
 Gem::Specification.new do |s|
   s.name = %q{ruby-saml-mod}
-  s.version = "0.1.4"
+  s.version = "0.1.5"
 
   s.authors = ["OneLogin LLC", "Bracken", "Zach"]
-  s.date = %q{2011-11-05}
+  s.date = %q{2012-01-26}
   s.extra_rdoc_files = [
     "LICENSE"
   ]
@@ -12,6 +12,7 @@ Gem::Specification.new do |s|
     "README",
     "lib/onelogin/saml.rb",
     "lib/onelogin/saml/auth_request.rb",
+    "lib/onelogin/saml/authn_contexts.rb",
     "lib/onelogin/saml/log_out_request.rb",
     "lib/onelogin/saml/meta_data.rb",
     "lib/onelogin/saml/name_identifiers.rb",
