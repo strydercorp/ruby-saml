@@ -1,9 +1,10 @@
 module Onelogin::Saml
   class Response
     
-    attr_accessor :settings, :document, :xml, :response
-    attr_accessor :name_id, :name_qualifier, :session_index
-    attr_accessor :status_code, :status_message
+    attr_reader :settings, :document, :xml, :response
+    attr_reader :name_id, :name_qualifier, :session_index
+    attr_reader :status_code, :status_message
+    attr_reader :in_response_to, :destination
     def initialize(response, settings)
       @response = response
       @settings = settings
@@ -12,6 +13,8 @@ module Onelogin::Saml
       @document = XMLSecurity::SignedDocument.new(@xml)
       @document.decrypt(@settings)
       
+      @in_response_to = REXML::XPath.first(@document, "/samlp:Response", Onelogin::NAMESPACES).attributes['InResponseTo'] rescue nil
+      @destination = REXML::XPath.first(@document, "/samlp:Response", Onelogin::NAMESPACES).attributes['Destination'] rescue nil
       @name_id = REXML::XPath.first(@document, "/samlp:Response/saml:Assertion/saml:Subject/saml:NameID", Onelogin::NAMESPACES).text rescue nil
       @name_qualifier = REXML::XPath.first(@document, "/samlp:Response/saml:Assertion/saml:Subject/saml:NameID", Onelogin::NAMESPACES).attributes["NameQualifier"] rescue nil
       @session_index = REXML::XPath.first(@document, "/samlp:Response/saml:Assertion/saml:AuthnStatement", Onelogin::NAMESPACES).attributes["SessionIndex"] rescue nil
@@ -24,8 +27,10 @@ module Onelogin::Saml
     end
     
     def is_valid?
-      unless @response.blank?
+      if !@response.blank? && @document.elements["//ds:X509Certificate"]
         @document.validate(@settings.idp_cert_fingerprint, @logger) unless !@settings.idp_cert_fingerprint
+      else
+        false
       end
     end
     
@@ -39,6 +44,16 @@ module Onelogin::Saml
     
     def no_authn_context?
       @status_code == Onelogin::Saml::StatusCodes::NO_AUTHN_CONTEXT_URI
+    end
+    
+    def fingerprint_from_idp
+      if base64_cert = @document.elements["//ds:X509Certificate"]
+        cert_text = Base64.decode64(base64_cert.text)
+        cert = OpenSSL::X509::Certificate.new(cert_text)
+        Digest::SHA1.hexdigest(cert.to_der)
+      else
+        nil
+      end
     end
   end
 end

@@ -1,27 +1,39 @@
 module Onelogin::Saml
   class AuthRequest
+    
+    attr_reader :settings, :id, :request_xml, :forward_url
+    
+    def initialize(settings)
+      @settings = settings
+    end
+    
     def self.create(settings)
-      id                = Onelogin::Saml::AuthRequest.generate_unique_id(42)
-      issue_instant     = Onelogin::Saml::AuthRequest.get_timestamp
+      ar = AuthRequest.new(settings)
+      ar.generate_request
+    end
+    
+    def generate_request
+      @id = Onelogin::Saml::AuthRequest.generate_unique_id(42)
+      issue_instant = Onelogin::Saml::AuthRequest.get_timestamp
 
-      request = 
-        "<samlp:AuthnRequest xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" ID=\"#{id}\" Version=\"2.0\" IssueInstant=\"#{issue_instant}\" ProtocolBinding=\"urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST\" AssertionConsumerServiceURL=\"#{settings.assertion_consumer_service_url}\">" +
-        "<saml:Issuer xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\">#{settings.issuer}</saml:Issuer>\n" +
-        "<samlp:NameIDPolicy xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" Format=\"#{settings.name_identifier_format}\" AllowCreate=\"true\"></samlp:NameIDPolicy>\n"
+      @request_xml = 
+        "<samlp:AuthnRequest xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" ID=\"#{@id}\" Version=\"2.0\" IssueInstant=\"#{issue_instant}\" ProtocolBinding=\"urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST\" AssertionConsumerServiceURL=\"#{settings.assertion_consumer_service_url}\">" +
+        "<saml:Issuer xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\">#{@settings.issuer}</saml:Issuer>\n" +
+        "<samlp:NameIDPolicy xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" Format=\"#{@settings.name_identifier_format}\" AllowCreate=\"true\"></samlp:NameIDPolicy>\n"
       
-      if settings.requested_authn_context
-        request += "<samlp:RequestedAuthnContext xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" Comparison=\"exact\">"
-        request += "<saml:AuthnContextClassRef xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\">#{settings.requested_authn_context}</saml:AuthnContextClassRef>"
-        request += "</samlp:RequestedAuthnContext>\n"
+      if @settings.requested_authn_context
+        @request_xml += "<samlp:RequestedAuthnContext xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" Comparison=\"exact\">"
+        @request_xml += "<saml:AuthnContextClassRef xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\">#{@settings.requested_authn_context}</saml:AuthnContextClassRef>"
+        @request_xml += "</samlp:RequestedAuthnContext>\n"
       end
         
-      request += "</samlp:AuthnRequest>"
+      @request_xml += "</samlp:AuthnRequest>"
 
-      deflated_request  = Zlib::Deflate.deflate(request, 9)[2..-5]     
+      deflated_request  = Zlib::Deflate.deflate(@request_xml, 9)[2..-5]     
       base64_request    = Base64.encode64(deflated_request)  
-      encoded_request   = CGI.escape(base64_request)  
-  
-      settings.idp_sso_target_url + "?SAMLRequest=" + encoded_request
+      encoded_request   = CGI.escape(base64_request)
+
+      @forward_url = @settings.idp_sso_target_url + "?SAMLRequest=" + encoded_request
     end
     
     private 
