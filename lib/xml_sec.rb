@@ -34,6 +34,8 @@ require "shellwords"
 module XMLSecurity
 
   class SignedDocument < REXML::Document
+    
+    attr_reader :validation_error
 
     def validate (idp_cert_fingerprint, logger = nil)
       # get cert from response
@@ -44,6 +46,7 @@ module XMLSecurity
       # check cert matches registered idp cert
       fingerprint             = Digest::SHA1.hexdigest(cert.to_der)
       valid_flag              = fingerprint == idp_cert_fingerprint.gsub(":", "").downcase
+      @validation_error       = "Invalid fingerprint" unless valid_flag
       
       return valid_flag if !valid_flag 
       
@@ -69,6 +72,20 @@ module XMLSecurity
         
         valid_flag            = hash == digest_value 
         
+        if !valid_flag
+          @validation_error   = <<-INFO
+Invalid references digest. 
+Got digest of 
+#{hash} 
+but expected 
+#{digest_value}
+XML from response:
+#{hashed_element}
+Canonized XML:
+#{canon_hashed_element}
+INFO
+        end
+        
         return valid_flag if !valid_flag
       end
  
@@ -85,6 +102,7 @@ module XMLSecurity
       cert                    = OpenSSL::X509::Certificate.new(cert_text)
       
       valid_flag              = cert.public_key.verify(OpenSSL::Digest::SHA1.new, signature, canon_string)
+      @validation_error       = "Invalid public key" unless valid_flag
         
       return valid_flag
     end

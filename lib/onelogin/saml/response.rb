@@ -5,6 +5,7 @@ module Onelogin::Saml
     attr_reader :name_id, :name_qualifier, :session_index
     attr_reader :status_code, :status_message
     attr_reader :in_response_to, :destination
+    attr_reader :validation_error
     def initialize(response, settings)
       @response = response
       @settings = settings
@@ -28,8 +29,20 @@ module Onelogin::Saml
     
     def is_valid?
       if !@response.blank? && @document.elements["//ds:X509Certificate"]
-        @document.validate(@settings.idp_cert_fingerprint, @logger) unless !@settings.idp_cert_fingerprint
+        if !@settings.idp_cert_fingerprint
+          @validation_error = "No fingerprint configured in SAML settings"
+          false
+        elsif @document.validate(@settings.idp_cert_fingerprint, @logger)
+          true
+        else
+          @validation_error = @document.validation_error
+          false
+        end
+      elsif @response.blank?
+        @validation_error = "No response to validate"
+        false
       else
+        @validation_error = "No ds:X509Certificate element"
         false
       end
     end
