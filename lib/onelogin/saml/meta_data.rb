@@ -23,7 +23,13 @@ module Onelogin::Saml
       end
       xml += %{
             <SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="#{settings.sp_slo_url}"/>
-            <AssertionConsumerService index="0" Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="#{settings.assertion_consumer_service_url}"/>
+      }
+      Array(settings.assertion_consumer_service_url).each_with_index do |url, index|
+        xml += %{
+            <AssertionConsumerService index="#{index}" Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="#{url}"/>
+        }
+      end
+      xml += %{
           </SPSSODescriptor>
           <ContactPerson contactType="technical">
             <SurName>#{settings.tech_contact_name}</SurName>
