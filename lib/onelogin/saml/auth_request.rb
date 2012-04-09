@@ -41,8 +41,8 @@ module Onelogin::Saml
     def self.generate_unique_id(length)
       chars = ("a".."f").to_a + ("0".."9").to_a
       chars_len = chars.size
-      unique_id = ""
-      1.upto(length) { |i| unique_id << chars[rand(chars_len-1)] }
+      unique_id = ("a".."f").to_a[rand(6)]
+      2.upto(length) { |i| unique_id << chars[rand(chars_len)] }
       unique_id
     end
     
