@@ -17,7 +17,7 @@ module Onelogin::Saml
       issue_instant = Onelogin::Saml::AuthRequest.get_timestamp
 
       @request_xml = 
-        "<samlp:AuthnRequest xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" ID=\"#{@id}\" Version=\"2.0\" IssueInstant=\"#{issue_instant}\" ProtocolBinding=\"urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST\" AssertionConsumerServiceURL=\"#{settings.assertion_consumer_service_url}\">" +
+        "<samlp:AuthnRequest xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" ID=\"#{@id}\" Version=\"2.0\" IssueInstant=\"#{issue_instant}\" ProtocolBinding=\"urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST\" AssertionConsumerServiceURL=\"#{Array(settings.assertion_consumer_service_url).first}\">" +
         "<saml:Issuer xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\">#{@settings.issuer}</saml:Issuer>\n" +
         "<samlp:NameIDPolicy xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" Format=\"#{@settings.name_identifier_format}\" AllowCreate=\"true\"></samlp:NameIDPolicy>\n"
       
@@ -41,8 +41,8 @@ module Onelogin::Saml
     def self.generate_unique_id(length)
       chars = ("a".."f").to_a + ("0".."9").to_a
       chars_len = chars.size
-      unique_id = ""
-      1.upto(length) { |i| unique_id << chars[rand(chars_len-1)] }
+      unique_id = ("a".."f").to_a[rand(6)]
+      2.upto(length) { |i| unique_id << chars[rand(chars_len)] }
       unique_id
     end
     
