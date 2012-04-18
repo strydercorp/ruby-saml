@@ -2,7 +2,7 @@ module Onelogin::Saml
   class Response
     
     attr_reader :settings, :document, :decrypted_document, :xml, :response
-    attr_reader :name_id, :name_qualifier, :session_index
+    attr_reader :name_id, :name_qualifier, :session_index, :saml_attributes
     attr_reader :status_code, :status_message
     attr_reader :in_response_to, :destination
     attr_reader :validation_error
@@ -21,6 +21,10 @@ module Onelogin::Saml
       @in_response_to = @decrypted_document.find_first("/samlp:Response", Onelogin::NAMESPACES)['InResponseTo'] rescue nil
       @destination = @decrypted_document.find_first("/samlp:Response", Onelogin::NAMESPACES)['Destination'] rescue nil
       @name_id = @decrypted_document.find_first("/samlp:Response/saml:Assertion/saml:Subject/saml:NameID", Onelogin::NAMESPACES).content rescue nil
+      @saml_attributes = {}
+      @decrypted_document.find("//saml:Attribute", Onelogin::NAMESPACES).each do |attr|
+        @saml_attributes[attr['FriendlyName']] = attr.content.strip rescue nil
+      end
       @name_qualifier = @decrypted_document.find_first("/samlp:Response/saml:Assertion/saml:Subject/saml:NameID", Onelogin::NAMESPACES)["NameQualifier"] rescue nil
       @session_index = @decrypted_document.find_first("/samlp:Response/saml:Assertion/saml:AuthnStatement", Onelogin::NAMESPACES)["SessionIndex"] rescue nil
       @status_code = @decrypted_document.find_first("/samlp:Response/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES)["Value"] rescue nil

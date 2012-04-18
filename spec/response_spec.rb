@@ -42,6 +42,8 @@ describe Onelogin::Saml::Response do
     @response.name_qualifier.should == "http://saml.example.com:8080/opensso"
     @response.session_index.should == "s2c57ee92b5ca08e93d751987d591c58acc68d2501"
     @response.status_code.should == "urn:oasis:names:tc:SAML:2.0:status:Success"
+    @response.saml_attributes['eduPersonAffiliation'].should == 'member'
+    @response.saml_attributes['eduPersonPrincipalName'].should == 'user@example.edu'
     @response.status_message.should == ""
   end
 end
