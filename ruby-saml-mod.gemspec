@@ -23,6 +23,7 @@ Gem::Specification.new do |s|
     "lib/xml_sec.rb",
     "ruby-saml-mod.gemspec"
   ]
+  s.add_dependency('libxml-ruby', '>= 2.3.0')
   s.homepage = %q{http://github.com/bracken/ruby-saml}
   s.require_paths = ["lib"]
   s.summary = %q{Ruby library for SAML service providers}

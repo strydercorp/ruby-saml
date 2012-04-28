@@ -23,93 +23,99 @@
 # Portions Copyrighted 2007 Todd W Saxton.
 
 require 'rubygems'
-require "rexml/document"
-require "rexml/xpath"
+require "xml/libxml"
 require "openssl"
-require "xmlcanonicalizer"
 require "digest/sha1"
 require "tempfile"
 require "shellwords"
  
 module XMLSecurity
-
-  class SignedDocument < REXML::Document
-    
+  module SignedDocument
     attr_reader :validation_error
 
-    def validate (idp_cert_fingerprint, logger = nil)
+    def validate(idp_cert_fingerprint, logger = nil)
       # get cert from response
-      base64_cert             = self.elements["//ds:X509Certificate"].text
-      cert_text               = Base64.decode64(base64_cert)
-      cert                    = OpenSSL::X509::Certificate.new(cert_text)
-      
+      base64_cert = self.find_first("//ds:X509Certificate", Onelogin::NAMESPACES).content
+      cert_text = Base64.decode64(base64_cert)
+      cert = OpenSSL::X509::Certificate.new(cert_text)
+
       # check cert matches registered idp cert
-      fingerprint             = Digest::SHA1.hexdigest(cert.to_der)
-      valid_flag              = fingerprint == idp_cert_fingerprint.gsub(":", "").downcase
-      @validation_error       = "Invalid fingerprint" unless valid_flag
-      
-      return valid_flag if !valid_flag 
-      
+      fingerprint = Digest::SHA1.hexdigest(cert.to_der)
+      expected_fingerprint = idp_cert_fingerprint.gsub(":", "").downcase
+      if fingerprint != expected_fingerprint
+        @validation_error = "Invalid fingerprint (expected #{expected_fingerprint}, got #{fingerprint})"
+        return false
+      end
+
       validate_doc(base64_cert, logger)
     end
-    
+
+    def canonicalize_node(node)
+      tmp_document = LibXML::XML::Document.new
+      tmp_document.root = tmp_document.import(node)
+      tmp_document.canonicalize
+    end
+
     def validate_doc(base64_cert, logger)
       # validate references
       
-      # remove signature node
-      sig_element = REXML::XPath.first(self, "//ds:Signature", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"})
-      sig_element.remove
+      sig_element = find_first("//ds:Signature", { "ds" => "http://www.w3.org/2000/09/xmldsig#" })
       
-      #check digests
-      REXML::XPath.each(sig_element, "//ds:Reference", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"}) do | ref |          
-        
-        uri                   = ref.attributes.get_attribute("URI").value
-        hashed_element        = REXML::XPath.first(self, "//[@ID='#{uri[1,uri.size]}']")
-        canoner               = XML::Util::XmlCanonicalizer.new(false, true)
-        canon_hashed_element  = canoner.canonicalize(hashed_element)
-        hash                  = Base64.encode64(Digest::SHA1.digest(canon_hashed_element)).chomp
-        digest_value          = REXML::XPath.first(ref, "//ds:DigestValue", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"}).text
-        
-        valid_flag            = hash == digest_value 
-        
-        if !valid_flag
-          @validation_error   = <<-INFO
-Invalid references digest. 
-Got digest of 
-#{hash} 
-but expected 
-#{digest_value}
-XML from response:
-#{hashed_element}
-Canonized XML:
-#{canon_hashed_element}
-INFO
+      # check digests
+      sig_element.find("//ds:Reference", { "ds" => "http://www.w3.org/2000/09/xmldsig#" }).each do |ref|
+        # Find the referenced element
+        uri = ref["URI"]
+        ref_element = find_first("//*[@ID='#{uri[1,uri.size]}']")
+
+        # Create a copy document with it
+        ref_document = LibXML::XML::Document.new
+        ref_document.root = ref_document.import(ref_element)
+
+        # Remove the Signature node
+        ref_document_sig_element = ref_document.find_first("//ds:Signature", { "ds" => "http://www.w3.org/2000/09/xmldsig#" })
+        ref_document_sig_element.remove! if ref_document_sig_element
+
+        # Canonicalize the referenced element's document
+        ref_document_canonicalized = ref_document.canonicalize
+        hash = Base64::encode64(Digest::SHA1.digest(ref_document_canonicalized)).chomp
+        digest_value = sig_element.find_first("//ds:DigestValue", { "ds" => "http://www.w3.org/2000/09/xmldsig#" }).content
+
+        if hash != digest_value
+          @validation_error = <<-EOF.gsub(/^\s+/, '')
+            Invalid references digest.
+            Got digest of
+            #{hash}
+            but expected
+            #{digest_value}
+            XML from response:
+            #{ref_document.to_s(:indent => false)}
+            Canonized XML:
+            #{ref_document_canonicalized}
+            EOF
+          return false
         end
-        
-        return valid_flag if !valid_flag
       end
  
       # verify signature
-      canoner                 = XML::Util::XmlCanonicalizer.new(false, true)
-      signed_info_element     = REXML::XPath.first(sig_element, "//ds:SignedInfo", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"})
-      canon_string            = canoner.canonicalize(signed_info_element)
+      signed_info_element = sig_element.find_first("//ds:SignedInfo", { "ds" => "http://www.w3.org/2000/09/xmldsig#" })
+      canon_string = canonicalize_node(signed_info_element)
 
-      base64_signature        = REXML::XPath.first(sig_element, "//ds:SignatureValue", {"ds"=>"http://www.w3.org/2000/09/xmldsig#"}).text
-      signature               = Base64.decode64(base64_signature)
-      
-      # get certificate object
-      cert_text               = Base64.decode64(base64_cert)
-      cert                    = OpenSSL::X509::Certificate.new(cert_text)
-      
-      valid_flag              = cert.public_key.verify(OpenSSL::Digest::SHA1.new, signature, canon_string)
-      @validation_error       = "Invalid public key" unless valid_flag
-        
-      return valid_flag
+      base64_signature = sig_element.find_first("//ds:SignatureValue", { "ds" => "http://www.w3.org/2000/09/xmldsig#" }).content
+      signature = Base64.decode64(base64_signature)
+
+      cert_text = Base64.decode64(base64_cert)
+      cert = OpenSSL::X509::Certificate.new(cert_text)
+
+      if !cert.public_key.verify(OpenSSL::Digest::SHA1.new, signature, canon_string)
+        @validation_error = "Invalid public key"
+        return false
+      end
+      return true
     end
 
     def decrypt(settings)
       if settings.encryption_configured?
-        REXML::XPath.each(self, "//xenc:EncryptedData", Onelogin::NAMESPACES) do |node|
+        find("//xenc:EncryptedData", Onelogin::NAMESPACES).each do |node|
           Tempfile.open("ruby-saml-decrypt") do |f|
             f.puts node.to_s
             f.close
@@ -119,9 +125,11 @@ INFO
               @logger.warn "Could not decrypt: #{decrypted_xml}" if @logger
               return false
             else
-              decrypted_doc = REXML::Document.new(decrypted_xml)
+              decrypted_doc = LibXML::XML::Document.string(decrypted_xml)
               decrypted_node = decrypted_doc.root
-              node.parent.replace_with(decrypted_node)
+              decrypted_node = self.import(decrypted_node)
+              node.parent.next = decrypted_node
+              node.parent.remove!
             end
             f.unlink
           end

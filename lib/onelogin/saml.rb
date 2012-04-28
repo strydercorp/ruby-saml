@@ -1,6 +1,6 @@
 require 'zlib'
 require "base64"
-require "rexml/document"
+require "xml/libxml"
 require "xml_sec"
 
 module Onelogin

@@ -1,8 +1,8 @@
 module Onelogin::Saml
   class Response
     
-    attr_reader :settings, :document, :xml, :response
-    attr_reader :name_id, :name_qualifier, :session_index
+    attr_reader :settings, :document, :decrypted_document, :xml, :response
+    attr_reader :name_id, :name_qualifier, :session_index, :saml_attributes
     attr_reader :status_code, :status_message
     attr_reader :in_response_to, :destination
     attr_reader :validation_error
@@ -11,16 +11,24 @@ module Onelogin::Saml
       @settings = settings
       
       @xml = Base64.decode64(@response)
-      @document = XMLSecurity::SignedDocument.new(@xml)
-      @document.decrypt(@settings)
+      @document = LibXML::XML::Document.string(@xml)
+      @document.extend(XMLSecurity::SignedDocument)
       
-      @in_response_to = REXML::XPath.first(@document, "/samlp:Response", Onelogin::NAMESPACES).attributes['InResponseTo'] rescue nil
-      @destination = REXML::XPath.first(@document, "/samlp:Response", Onelogin::NAMESPACES).attributes['Destination'] rescue nil
-      @name_id = REXML::XPath.first(@document, "/samlp:Response/saml:Assertion/saml:Subject/saml:NameID", Onelogin::NAMESPACES).text rescue nil
-      @name_qualifier = REXML::XPath.first(@document, "/samlp:Response/saml:Assertion/saml:Subject/saml:NameID", Onelogin::NAMESPACES).attributes["NameQualifier"] rescue nil
-      @session_index = REXML::XPath.first(@document, "/samlp:Response/saml:Assertion/saml:AuthnStatement", Onelogin::NAMESPACES).attributes["SessionIndex"] rescue nil
-      @status_code = REXML::XPath.first(@document, "/samlp:Response/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES).attributes["Value"] rescue nil
-      @status_message = REXML::XPath.first(@document, "/samlp:Response/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES).text rescue nil
+      @decrypted_document = LibXML::XML::Document.document(@document)
+      @decrypted_document.extend(XMLSecurity::SignedDocument)
+      @decrypted_document.decrypt(@settings)
+      
+      @in_response_to = @decrypted_document.find_first("/samlp:Response", Onelogin::NAMESPACES)['InResponseTo'] rescue nil
+      @destination = @decrypted_document.find_first("/samlp:Response", Onelogin::NAMESPACES)['Destination'] rescue nil
+      @name_id = @decrypted_document.find_first("/samlp:Response/saml:Assertion/saml:Subject/saml:NameID", Onelogin::NAMESPACES).content rescue nil
+      @saml_attributes = {}
+      @decrypted_document.find("//saml:Attribute", Onelogin::NAMESPACES).each do |attr|
+        @saml_attributes[attr['FriendlyName']] = attr.content.strip rescue nil
+      end
+      @name_qualifier = @decrypted_document.find_first("/samlp:Response/saml:Assertion/saml:Subject/saml:NameID", Onelogin::NAMESPACES)["NameQualifier"] rescue nil
+      @session_index = @decrypted_document.find_first("/samlp:Response/saml:Assertion/saml:AuthnStatement", Onelogin::NAMESPACES)["SessionIndex"] rescue nil
+      @status_code = @decrypted_document.find_first("/samlp:Response/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES)["Value"] rescue nil
+      @status_message = @decrypted_document.find_first("/samlp:Response/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES).content rescue nil
     end
     
     def logger=(val)
@@ -28,23 +36,27 @@ module Onelogin::Saml
     end
     
     def is_valid?
-      if !@response.blank? && @document.elements["//ds:X509Certificate"]
-        if !@settings.idp_cert_fingerprint
-          @validation_error = "No fingerprint configured in SAML settings"
-          false
-        elsif @document.validate(@settings.idp_cert_fingerprint, @logger)
-          true
-        else
-          @validation_error = @document.validation_error
-          false
-        end
-      elsif @response.blank?
+      if @response.nil? || @response == ""
         @validation_error = "No response to validate"
-        false
-      else
-        @validation_error = "No ds:X509Certificate element"
-        false
+        return false
       end
+      
+      if @document.find_first("//ds:X509Certificate", Onelogin::NAMESPACES).nil?
+        @validation_error = "No ds:X509Certificate element"
+        return false
+      end
+      
+      if !@settings.idp_cert_fingerprint
+        @validation_error = "No fingerprint configured in SAML settings"
+        return false
+      end
+      
+      if !@document.validate(@settings.idp_cert_fingerprint, @logger)
+        @validation_error = @document.validation_error
+        return false
+      end
+      
+      true
     end
     
     def success_status?
@@ -60,8 +72,8 @@ module Onelogin::Saml
     end
     
     def fingerprint_from_idp
-      if base64_cert = @document.elements["//ds:X509Certificate"]
-        cert_text = Base64.decode64(base64_cert.text)
+      if base64_cert = @document.find_first("//ds:X509Certificate")
+        cert_text = Base64.decode64(base64_cert.content)
         cert = OpenSSL::X509::Certificate.new(cert_text)
         Digest::SHA1.hexdigest(cert.to_der)
       else
