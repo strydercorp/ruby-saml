@@ -10,9 +10,15 @@ module Onelogin::Saml
       @response = response
       @settings = settings
       
-      @xml = Base64.decode64(@response)
-      @document = LibXML::XML::Document.string(@xml)
-      @document.extend(XMLSecurity::SignedDocument)
+      begin
+        @xml = Base64.decode64(@response)
+        @document = LibXML::XML::Document.string(@xml)
+        @document.extend(XMLSecurity::SignedDocument)
+      rescue => e
+        # could not parse document, everything is invalid
+        @response = nil
+        return
+      end
       
       @decrypted_document = LibXML::XML::Document.document(@document)
       @decrypted_document.extend(XMLSecurity::SignedDocument)

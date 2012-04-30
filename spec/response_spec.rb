@@ -46,4 +46,16 @@ describe Onelogin::Saml::Response do
     @response.saml_attributes['eduPersonPrincipalName'].should == 'user@example.edu'
     @response.status_message.should == ""
   end
+  
+  it "should not throw an exception when an empty string is passed as the doc" do
+    settings = Onelogin::Saml::Settings.new
+    lambda { 
+      r = Onelogin::Saml::Response.new('foo', settings)
+      r.should_not be_is_valid
+    }.should_not raise_error
+    lambda {
+      r = Onelogin::Saml::Response.new('', settings)
+      r.should_not be_is_valid
+    }.should_not raise_error
+  end
 end
