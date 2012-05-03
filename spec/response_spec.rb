@@ -45,6 +45,7 @@ describe Onelogin::Saml::Response do
     @response.saml_attributes['eduPersonAffiliation'].should == 'member'
     @response.saml_attributes['eduPersonPrincipalName'].should == 'user@example.edu'
     @response.status_message.should == ""
+    @response.fingerprint_from_idp.should == 'def18dbed547cdf3d52b627f41637c443045fe33'
   end
   
   it "should not throw an exception when an empty string is passed as the doc" do
