@@ -78,7 +78,7 @@ module Onelogin::Saml
     end
     
     def fingerprint_from_idp
-      if base64_cert = @document.find_first("//ds:X509Certificate")
+      if base64_cert = @document.find_first("//ds:X509Certificate", Onelogin::NAMESPACES)
         cert_text = Base64.decode64(base64_cert.content)
         cert = OpenSSL::X509::Certificate.new(cert_text)
         Digest::SHA1.hexdigest(cert.to_der)
