@@ -1,1 +1,5 @@
-gem 'XMLCanonicalizer', '1.0.1'
+source 'http://rubygems.org'
+
+gem 'libxml-ruby'
+gem 'ruby-debug'
+gem 'ruby-saml-mod', :path => '.'
