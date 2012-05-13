@@ -58,11 +58,10 @@ module XMLSecurity
 
     def validate_doc(base64_cert, logger)
       # validate references
-      
       sig_element = find_first("//ds:Signature", { "ds" => "http://www.w3.org/2000/09/xmldsig#" })
       
       # check digests
-      sig_element.find("//ds:Reference", { "ds" => "http://www.w3.org/2000/09/xmldsig#" }).each do |ref|
+      sig_element.find(".//ds:Reference", { "ds" => "http://www.w3.org/2000/09/xmldsig#" }).each do |ref|
         # Find the referenced element
         uri = ref["URI"]
         ref_element = find_first("//*[@ID='#{uri[1,uri.size]}']")
@@ -72,13 +71,13 @@ module XMLSecurity
         ref_document.root = ref_document.import(ref_element)
 
         # Remove the Signature node
-        ref_document_sig_element = ref_document.find_first("//ds:Signature", { "ds" => "http://www.w3.org/2000/09/xmldsig#" })
+        ref_document_sig_element = ref_document.find_first(".//ds:Signature", { "ds" => "http://www.w3.org/2000/09/xmldsig#" })
         ref_document_sig_element.remove! if ref_document_sig_element
 
         # Canonicalize the referenced element's document
         ref_document_canonicalized = ref_document.canonicalize
         hash = Base64::encode64(Digest::SHA1.digest(ref_document_canonicalized)).chomp
-        digest_value = sig_element.find_first("//ds:DigestValue", { "ds" => "http://www.w3.org/2000/09/xmldsig#" }).content
+        digest_value = sig_element.find_first(".//ds:DigestValue", { "ds" => "http://www.w3.org/2000/09/xmldsig#" }).content
 
         if hash != digest_value
           @validation_error = <<-EOF.gsub(/^\s+/, '')
@@ -97,10 +96,10 @@ module XMLSecurity
       end
  
       # verify signature
-      signed_info_element = sig_element.find_first("//ds:SignedInfo", { "ds" => "http://www.w3.org/2000/09/xmldsig#" })
+      signed_info_element = sig_element.find_first(".//ds:SignedInfo", { "ds" => "http://www.w3.org/2000/09/xmldsig#" })
       canon_string = canonicalize_node(signed_info_element)
 
-      base64_signature = sig_element.find_first("//ds:SignatureValue", { "ds" => "http://www.w3.org/2000/09/xmldsig#" }).content
+      base64_signature = sig_element.find_first(".//ds:SignatureValue", { "ds" => "http://www.w3.org/2000/09/xmldsig#" }).content
       signature = Base64.decode64(base64_signature)
 
       cert_text = Base64.decode64(base64_cert)
