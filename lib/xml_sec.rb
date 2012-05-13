@@ -28,7 +28,7 @@ require "openssl"
 require "digest/sha1"
 require "tempfile"
 require "shellwords"
- 
+
 module XMLSecurity
   module SignedDocument
     attr_reader :validation_error
@@ -50,16 +50,34 @@ module XMLSecurity
       validate_doc(base64_cert, logger)
     end
 
-    def canonicalize_node(node)
+    def canonicalize_doc(doc, method)
+      # this is not robust enough, but a switch to libxmlsec replacing all
+      # the hackery is imminent, so I'm not going to spend a lot of time on it.
+      mode = 0; comments = false
+      if method
+        mode = 1 if method =~ %r{xml-exc-c14n}
+        mode = 2 if method =~ %r{xml-c14n11}
+        comments = method =~ %r{#withcomments}i
+      end
+      doc.canonicalize(:mode => mode, :comments => comments)
+    end
+
+    def canonicalize_node(node, method)
       tmp_document = LibXML::XML::Document.new
       tmp_document.root = tmp_document.import(node)
-      tmp_document.canonicalize
+      canonicalize_doc(tmp_document, method)
     end
 
     def validate_doc(base64_cert, logger)
       # validate references
       sig_element = find_first("//ds:Signature", { "ds" => "http://www.w3.org/2000/09/xmldsig#" })
-      
+
+      c14n_method = nil
+      c14n_method_element = sig_element.find_first(".//ds:CanonicalizationMethod", { "ds" => "http://www.w3.org/2000/09/xmldsig#" })
+      if c14n_method_element
+        c14n_method = c14n_method_element["Algorithm"]
+      end
+
       # check digests
       sig_element.find(".//ds:Reference", { "ds" => "http://www.w3.org/2000/09/xmldsig#" }).each do |ref|
         # Find the referenced element
@@ -75,7 +93,7 @@ module XMLSecurity
         ref_document_sig_element.remove! if ref_document_sig_element
 
         # Canonicalize the referenced element's document
-        ref_document_canonicalized = ref_document.canonicalize
+        ref_document_canonicalized = canonicalize_doc(ref_document, c14n_method)
         hash = Base64::encode64(Digest::SHA1.digest(ref_document_canonicalized)).chomp
         digest_value = sig_element.find_first(".//ds:DigestValue", { "ds" => "http://www.w3.org/2000/09/xmldsig#" }).content
 
@@ -97,7 +115,7 @@ module XMLSecurity
  
       # verify signature
       signed_info_element = sig_element.find_first(".//ds:SignedInfo", { "ds" => "http://www.w3.org/2000/09/xmldsig#" })
-      canon_string = canonicalize_node(signed_info_element)
+      canon_string = canonicalize_node(signed_info_element, c14n_method)
 
       base64_signature = sig_element.find_first(".//ds:SignatureValue", { "ds" => "http://www.w3.org/2000/09/xmldsig#" }).content
       signature = Base64.decode64(base64_signature)
