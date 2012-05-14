@@ -47,18 +47,35 @@ module Onelogin::Saml
         return false
       end
       
-      if @document.find_first("//ds:X509Certificate", Onelogin::NAMESPACES).nil?
-        @validation_error = "No ds:X509Certificate element"
-        return false
-      end
-      
       if !@settings.idp_cert_fingerprint
         @validation_error = "No fingerprint configured in SAML settings"
         return false
       end
       
-      if !@document.validate(@settings.idp_cert_fingerprint, @logger)
-        @validation_error = @document.validation_error
+      # Verify the original document if it has a signature, otherwise verify the signature
+      # in the encrypted portion. If there is no signature, then we can't verify.
+      verified = false
+      if @document.find_first("//ds:Signature", Onelogin::NAMESPACES)
+        verified = @document.validate(@settings.idp_cert_fingerprint, @logger)
+        if !verified
+          @validation_error = @document.validation_error
+          return false
+        end
+      end
+      
+      # Technically we should also verify the signature inside the encrypted portion, but if
+      # the cryptext has already been verified, the encrypted contents couldn't have been
+      # tampered with. Once we switch to using libxmlsec this won't matter anymore anyway.
+      if !verified && @decrypted_document.find_first("//ds:Signature", Onelogin::NAMESPACES)
+        verified = @decrypted_document.validate(@settings.idp_cert_fingerprint, @logger)
+        if !verified
+          @validation_error = @document.validation_error
+          return false
+        end
+      end
+      
+      if !verified
+        @validation_error = "No signature found in the response"
         return false
       end
       
