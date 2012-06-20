@@ -26,7 +26,7 @@ module Onelogin::Saml
       base64_logout_request = Base64.encode64(deflated_logout_request)  
       encoded_logout_request = CGI.escape(base64_logout_request)  
 
-      @forward_url = @settings.idp_slo_target_url + "?SAMLRequest=" + encoded_logout_request 
+      @forward_url = @settings.idp_slo_target_url + (@settings.idp_slo_target_url.include?("?") ? "&" : "?") + "SAMLRequest=" + encoded_logout_request 
   
       @forward_url
     end
