@@ -33,7 +33,7 @@ module Onelogin::Saml
       base64_request    = Base64.encode64(deflated_request)  
       encoded_request   = CGI.escape(base64_request)
 
-      @forward_url = @settings.idp_sso_target_url + "?SAMLRequest=" + encoded_request
+      @forward_url = @settings.idp_sso_target_url + (@settings.idp_sso_target_url.include?("?") ? "&" : "?") + "SAMLRequest=" + encoded_request
     end
     
     private 

@@ -2,6 +2,7 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper.rb')
 
 require 'ruby-debug'
 require 'rexml/document'
+require 'CGI'
 
 describe Onelogin::Saml::Response do
   describe "decrypting assertions" do
@@ -58,5 +59,45 @@ describe Onelogin::Saml::Response do
       r = Onelogin::Saml::Response.new('', settings)
       r.should_not be_is_valid
     }.should_not raise_error
+  end
+
+  describe "forward_urls" do
+    it "should should append the saml request to a url" do
+      settings = Onelogin::Saml::Settings.new(
+        :xmlsec1_path => "/usr/local/bin/xmlsec1",
+        :xmlsec_certificate => fixture_path("test1-cert.pem"),
+        :xmlsec_privatekey => fixture_path("test1-key.pem"),
+        :idp_sso_target_url => "http://example.com/login.php",
+        :idp_slo_target_url => "http://example.com/logout.php"
+      )
+
+      forward_url = Onelogin::Saml::AuthRequest::create(settings)
+      prefix = "http://example.com/login.php?SAMLRequest="
+      forward_url[0...prefix.size].should eql(prefix)
+
+      session = { :name_qualifier => 'foo', :name_id => 'bar', :session_index => 'baz' }
+      forward_url = Onelogin::Saml::LogOutRequest::create(settings, session)
+      prefix = "http://example.com/logout.php?SAMLRequest="
+      forward_url[0...prefix.size].should eql(prefix)
+    end
+
+    it "should append the saml request to a url with query parameters" do
+      settings = Onelogin::Saml::Settings.new(
+        :xmlsec1_path => "/usr/local/bin/xmlsec1",
+        :xmlsec_certificate => fixture_path("test1-cert.pem"),
+        :xmlsec_privatekey => fixture_path("test1-key.pem"),
+        :idp_sso_target_url => "http://example.com/login.php?param=foo",
+        :idp_slo_target_url => "http://example.com/logout.php?param=foo"
+      )
+
+      forward_url = Onelogin::Saml::AuthRequest::create(settings)
+      prefix = "http://example.com/login.php?param=foo&SAMLRequest="
+      forward_url[0...prefix.size].should eql(prefix)
+
+      session = { :name_qualifier => 'foo', :name_id => 'bar', :session_index => 'baz' }
+      forward_url = Onelogin::Saml::LogOutRequest::create(settings, session)
+      prefix = "http://example.com/logout.php?param=foo&SAMLRequest="
+      forward_url[0...prefix.size].should eql(prefix)
+    end
   end
 end
