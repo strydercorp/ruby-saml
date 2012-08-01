@@ -22,7 +22,7 @@ module Onelogin::Saml
       
       @decrypted_document = LibXML::XML::Document.document(@document)
       @decrypted_document.extend(XMLSecurity::SignedDocument)
-      @decrypted_document.decrypt(@settings)
+      @decrypted_document.decrypt!(@settings)
       
       @in_response_to = @decrypted_document.find_first("/samlp:Response", Onelogin::NAMESPACES)['InResponseTo'] rescue nil
       @destination = @decrypted_document.find_first("/samlp:Response", Onelogin::NAMESPACES)['Destination'] rescue nil
@@ -62,10 +62,7 @@ module Onelogin::Saml
           return false
         end
       end
-      
-      # Technically we should also verify the signature inside the encrypted portion, but if
-      # the cryptext has already been verified, the encrypted contents couldn't have been
-      # tampered with. Once we switch to using libxmlsec this won't matter anymore anyway.
+
       if !verified && @decrypted_document.find_first("//ds:Signature", Onelogin::NAMESPACES)
         verified = @decrypted_document.validate(@settings.idp_cert_fingerprint, @logger)
         if !verified
@@ -95,7 +92,7 @@ module Onelogin::Saml
     end
     
     def fingerprint_from_idp
-      if base64_cert = @document.find_first("//ds:X509Certificate", Onelogin::NAMESPACES)
+      if base64_cert = @decrypted_document.find_first("//ds:X509Certificate", Onelogin::NAMESPACES)
         cert_text = Base64.decode64(base64_cert.content)
         cert = OpenSSL::X509::Certificate.new(cert_text)
         Digest::SHA1.hexdigest(cert.to_der)
