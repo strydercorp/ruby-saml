@@ -40,8 +40,7 @@ describe Onelogin::Saml::Response do
     @xmlb64 = Base64.encode64(File.read(fixture_path("test2-response.xml")))
     @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'def18dbed547cdf3d52b627f41637c443045fe33')
     @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
-    # the signature was broken when this assertion was anonymized
-    #@response.should be_is_valid
+    @response.should_not be_is_valid # this assertion was anonymized, breaking the digital signature
     @response.name_id.should == "zach@example.com"
     @response.name_qualifier.should == "http://saml.example.com:8080/opensso"
     @response.session_index.should == "s2c57ee92b5ca08e93d751987d591c58acc68d2501"
@@ -51,7 +50,18 @@ describe Onelogin::Saml::Response do
     @response.status_message.should == ""
     @response.fingerprint_from_idp.should == 'def18dbed547cdf3d52b627f41637c443045fe33'
   end
-  
+
+  it "should map OIDs to known attributes" do
+    @xmlb64 = Base64.encode64(File.read(fixture_path("test3-response.xml")))
+    @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'afe71c28ef740bc87425be13a2263d37971da1f9')
+    @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
+    @response.should be_is_valid
+    @response.status_code.should == "urn:oasis:names:tc:SAML:2.0:status:Success"
+    @response.saml_attributes['eduPersonAffiliation'].should == 'member'
+    @response.saml_attributes['eduPersonPrincipalName'].should == 'student@example.edu'
+    @response.fingerprint_from_idp.should == 'afe71c28ef740bc87425be13a2263d37971da1f9'
+  end
+
   it "should not throw an exception when an empty string is passed as the doc" do
     settings = Onelogin::Saml::Settings.new
     lambda { 

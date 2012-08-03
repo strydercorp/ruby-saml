@@ -29,7 +29,8 @@ module Onelogin::Saml
       @name_id = @decrypted_document.find_first("/samlp:Response/saml:Assertion/saml:Subject/saml:NameID", Onelogin::NAMESPACES).content rescue nil
       @saml_attributes = {}
       @decrypted_document.find("//saml:Attribute", Onelogin::NAMESPACES).each do |attr|
-        @saml_attributes[attr['FriendlyName']] = attr.content.strip rescue nil
+        attrname = attr['FriendlyName'] || Onelogin::ATTRIBUTES[attr['Name']] || attr['Name']
+        @saml_attributes[attrname] = attr.content.strip rescue nil
       end
       @name_qualifier = @decrypted_document.find_first("/samlp:Response/saml:Assertion/saml:Subject/saml:NameID", Onelogin::NAMESPACES)["NameQualifier"] rescue nil
       @session_index = @decrypted_document.find_first("/samlp:Response/saml:Assertion/saml:AuthnStatement", Onelogin::NAMESPACES)["SessionIndex"] rescue nil

@@ -286,7 +286,7 @@ module XMLSecurity
         # verify!
         raise "failed verifying dsig" if XMLSecurity.xmlSecDSigCtxVerify(ctx, node) < 0
         result = ctx[:status] == :xmlSecDSigStatusSucceeded
-        @validation_error = cts[:status].to_s unless result
+        @validation_error = ctx[:status].to_s unless result
       rescue Exception => e
         @validation_error = e.message
       ensure
