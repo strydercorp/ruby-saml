@@ -31,7 +31,7 @@ require "digest/sha1"
 
 module XMLSecurity
   extend FFI::Library
-  ffi_lib "xmlsec1"
+  ffi_lib "xmlsec1-openssl"
 
   enum :xmlSecKeyDataFormat, [
       :xmlSecKeyDataFormatUnknown,
@@ -176,17 +176,16 @@ module XMLSecurity
   attach_function :xmlSecFindNode, [ :pointer, :string, :string ], :pointer
   attach_function :xmlSecDSigCtxCreate, [ :pointer ], XmlSecDSigCtx.by_ref
   attach_function :xmlSecDSigCtxVerify, [ XmlSecDSigCtx.by_ref, :pointer ], :int
-  attach_function :xmlSecCryptoInit, [], :int
-  attach_function :xmlSecCryptoDLLoadLibrary, [ :string ], :int
-  attach_function :xmlSecCryptoAppInit, [ :pointer ], :int
+  attach_function :xmlSecOpenSSLInit, [], :int
+  attach_function :xmlSecOpenSSLAppInit, [ :pointer ], :int
   attach_function :xmlSecAddIDs, [ :pointer, :pointer, :pointer ], :void
   attach_function :xmlSecDSigCtxDestroy, [ XmlSecDSigCtx.by_ref ], :void
 
   attach_function :xmlSecKeysMngrCreate, [], :pointer
-  attach_function :xmlSecCryptoAppDefaultKeysMngrInit, [ :pointer ], :int
-  attach_function :xmlSecCryptoAppKeyLoad, [ :string, :xmlSecKeyDataFormat, :pointer, :pointer, :pointer ], :pointer
-  attach_function :xmlSecCryptoAppKeyLoadMemory, [ :pointer, :uint, :xmlSecKeyDataFormat, :pointer, :pointer, :pointer ], :pointer
-  attach_function :xmlSecCryptoAppDefaultKeysMngrAdoptKey, [ :pointer, :pointer ], :int
+  attach_function :xmlSecOpenSSLAppDefaultKeysMngrInit, [ :pointer ], :int
+  attach_function :xmlSecOpenSSLAppKeyLoad, [ :string, :xmlSecKeyDataFormat, :pointer, :pointer, :pointer ], :pointer
+  attach_function :xmlSecOpenSSLAppKeyLoadMemory, [ :pointer, :uint, :xmlSecKeyDataFormat, :pointer, :pointer, :pointer ], :pointer
+  attach_function :xmlSecOpenSSLAppDefaultKeysMngrAdoptKey, [ :pointer, :pointer ], :int
   attach_function :xmlSecKeysMngrDestroy, [ :pointer ], :void
 
   attach_function :xmlSecEncCtxCreate, [ :pointer ], :pointer
@@ -201,9 +200,8 @@ module XMLSecurity
 
   self.xmlInitParser
   raise "Failed initializing XMLSec" if self.xmlSecInit < 0
-  raise "Failed initializing xmlsec with openssl" if self.xmlSecCryptoDLLoadLibrary("openssl") < 0
-  raise "Failed initializing app crypto" if self.xmlSecCryptoAppInit(nil) < 0
-  raise "Failed initializing crypto" if self.xmlSecCryptoInit < 0
+  raise "Failed initializing app crypto" if self.xmlSecOpenSSLAppInit(nil) < 0
+  raise "Failed initializing crypto" if self.xmlSecOpenSSLInit < 0
 
   module SignedDocument
     attr_reader :validation_error
@@ -260,10 +258,10 @@ module XMLSecurity
       begin
         # set up the keymgr
         kmgr = XMLSecurity.xmlSecKeysMngrCreate
-        raise "failed initializing key mgr" if XMLSecurity.xmlSecCryptoAppDefaultKeysMngrInit(kmgr) < 0
-        key = XMLSecurity.xmlSecCryptoAppKeyLoadMemory(pem, pem.length, :xmlSecKeyDataFormatPem, nil, nil, nil)
+        raise "failed initializing key mgr" if XMLSecurity.xmlSecOpenSSLAppDefaultKeysMngrInit(kmgr) < 0
+        key = XMLSecurity.xmlSecOpenSSLAppKeyLoadMemory(pem, pem.length, :xmlSecKeyDataFormatPem, nil, nil, nil)
         raise "failed loading key" if key.null?
-        raise "failed adding key to mgr" if XMLSecurity.xmlSecCryptoAppDefaultKeysMngrAdoptKey(kmgr, key) < 0
+        raise "failed adding key to mgr" if XMLSecurity.xmlSecOpenSSLAppDefaultKeysMngrAdoptKey(kmgr, key) < 0
 
         # parse the xml
         doc = XMLSecurity.xmlSecParseMemory(xml, xml.length, 0)
@@ -322,11 +320,11 @@ module XMLSecurity
       result = nil
       begin
         kmgr = XMLSecurity.xmlSecKeysMngrCreate
-        raise "Failed initializing key mgr" if XMLSecurity.xmlSecCryptoAppDefaultKeysMngrInit(kmgr) < 0
+        raise "Failed initializing key mgr" if XMLSecurity.xmlSecOpenSSLAppDefaultKeysMngrInit(kmgr) < 0
 
-        key = XMLSecurity.xmlSecCryptoAppKeyLoad(settings.xmlsec_privatekey, :xmlSecKeyDataFormatPem, nil, nil, nil)
+        key = XMLSecurity.xmlSecOpenSSLAppKeyLoad(settings.xmlsec_privatekey, :xmlSecKeyDataFormatPem, nil, nil, nil)
         raise "Failed loading key" if key.null?
-        raise "Failed adding key to mgr" if XMLSecurity.xmlSecCryptoAppDefaultKeysMngrAdoptKey(kmgr, key) < 0
+        raise "Failed adding key to mgr" if XMLSecurity.xmlSecOpenSSLAppDefaultKeysMngrAdoptKey(kmgr, key) < 0
 
         doc = XMLSecurity.xmlSecParseMemory(xmlstr, xmlstr.length, 0)
         raise "Failed to parse node" if doc.null?
