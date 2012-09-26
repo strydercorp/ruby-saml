@@ -39,7 +39,8 @@ describe Onelogin::Saml::Response do
   it "should use namespaces correctly to look up attributes" do
     @xmlb64 = Base64.encode64(File.read(fixture_path("test2-response.xml")))
     @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'def18dbed547cdf3d52b627f41637c443045fe33')
-    @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
+    @response = Onelogin::Saml::Response.new(@xmlb64)
+    @response.process(@settings)
     @response.should_not be_is_valid # this assertion was anonymized, breaking the digital signature
     @response.name_id.should == "zach@example.com"
     @response.name_qualifier.should == "http://saml.example.com:8080/opensso"
@@ -49,6 +50,7 @@ describe Onelogin::Saml::Response do
     @response.saml_attributes['eduPersonPrincipalName'].should == 'user@example.edu'
     @response.status_message.should == ""
     @response.fingerprint_from_idp.should == 'def18dbed547cdf3d52b627f41637c443045fe33'
+    @response.issuer.should == 'http://saml.example.com:8080/opensso'
   end
 
   it "should map OIDs to known attributes" do

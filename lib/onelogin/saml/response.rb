@@ -1,15 +1,15 @@
 module Onelogin::Saml
   class Response
-    
-    attr_reader :settings, :document, :decrypted_document, :xml, :response
+
+    attr_accessor :settings
+    attr_reader :document, :decrypted_document, :xml, :response
     attr_reader :name_id, :name_qualifier, :session_index, :saml_attributes
     attr_reader :status_code, :status_message
-    attr_reader :in_response_to, :destination
+    attr_reader :in_response_to, :destination, :issuer
     attr_reader :validation_error
-    def initialize(response, settings)
+    def initialize(response, settings=nil)
       @response = response
-      @settings = settings
-      
+
       begin
         @xml = Base64.decode64(@response)
         @document = LibXML::XML::Document.string(@xml)
@@ -19,11 +19,21 @@ module Onelogin::Saml
         @response = nil
         return
       end
-      
+
+      @issuer = @document.find_first("/samlp:Response/saml:Issuer", Onelogin::NAMESPACES).content rescue nil
+      @status_code = @document.find_first("/samlp:Response/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES)["Value"] rescue nil
+
+      process(settings) if settings
+    end
+
+    def process(settings)
+      @settings = settings
+      return unless @response
+
       @decrypted_document = LibXML::XML::Document.document(@document)
       @decrypted_document.extend(XMLSecurity::SignedDocument)
       @decrypted_document.decrypt!(@settings)
-      
+
       @in_response_to = @decrypted_document.find_first("/samlp:Response", Onelogin::NAMESPACES)['InResponseTo'] rescue nil
       @destination = @decrypted_document.find_first("/samlp:Response", Onelogin::NAMESPACES)['Destination'] rescue nil
       @name_id = @decrypted_document.find_first("/samlp:Response/saml:Assertion/saml:Subject/saml:NameID", Onelogin::NAMESPACES).content rescue nil
@@ -34,10 +44,9 @@ module Onelogin::Saml
       end
       @name_qualifier = @decrypted_document.find_first("/samlp:Response/saml:Assertion/saml:Subject/saml:NameID", Onelogin::NAMESPACES)["NameQualifier"] rescue nil
       @session_index = @decrypted_document.find_first("/samlp:Response/saml:Assertion/saml:AuthnStatement", Onelogin::NAMESPACES)["SessionIndex"] rescue nil
-      @status_code = @decrypted_document.find_first("/samlp:Response/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES)["Value"] rescue nil
       @status_message = @decrypted_document.find_first("/samlp:Response/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES).content rescue nil
     end
-    
+
     def logger=(val)
       @logger = val
     end
