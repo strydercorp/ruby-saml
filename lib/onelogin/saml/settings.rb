@@ -56,5 +56,9 @@ module Onelogin::Saml
     def encryption_configured?
       !!self.xmlsec_privatekey
     end
+
+    def sign?
+      !!self.xmlsec_privatekey
+    end
   end
 end

@@ -194,11 +194,43 @@ module XMLSecurity
 
   attach_function :xmlSecErrorsDefaultCallbackEnableOutput, [ :bool ], :void
 
+  attach_function :xmlSecTransformExclC14NGetKlass, [], :pointer
+  attach_function :xmlSecOpenSSLTransformRsaSha1GetKlass, [], :pointer
+  attach_function :xmlSecOpenSSLTransformSha1GetKlass, [], :pointer
+
+  attach_function :xmlSecTmplSignatureCreate, [ :pointer, :pointer, :pointer, :string ], :pointer
+  attach_function :xmlSecTmplSignatureAddReference, [ :pointer, :pointer, :pointer, :pointer, :pointer ], :pointer
+  attach_function :xmlSecTransformEnvelopedGetKlass, [], :pointer
+  attach_function :xmlSecTmplSignatureEnsureKeyInfo, [ :pointer, :pointer ], :pointer
+  attach_function :xmlSecTmplReferenceAddTransform, [ :pointer, :pointer ], :pointer
+
+  attach_function :xmlSecKeySetName, [ :pointer, :string ], :int
+
+  attach_function :xmlSecTmplKeyInfoAddKeyName, [ :pointer, :pointer ], :pointer
+
+  attach_function :xmlSecDSigCtxSign, [ :pointer, :pointer ], :int
+
+
+
+
   # libxml functions
   attach_function :xmlInitParser, [], :void
   attach_function :xmlDocGetRootElement, [ :pointer ], :pointer
   attach_function :xmlDocDumpFormatMemory, [ :pointer, :pointer, :pointer, :int ], :void
   attach_function :xmlFreeDoc, [ :pointer ], :void
+  attach_function :xmlParseMemory, [ :pointer, :int ], :pointer
+  attach_function :xmlAddChild, [ :pointer, :pointer ], :pointer
+
+  attach_variable :__xmlFree, :xmlFree, callback([ :pointer ], :void)
+  attach_variable :__xmlMalloc, :xmlMalloc, callback([ :size_t ], :pointer)
+
+  def self.xmlMalloc(size)
+    __xmlMalloc.call(size)
+  end
+
+  def self.xmlFree(ptr)
+    __xmlFree.call(ptr)
+  end
 
   self.xmlInitParser
   raise "Failed initializing XMLSec" if self.xmlSecInit < 0
@@ -359,4 +391,59 @@ module XMLSecurity
       result
     end
   end
+
+  class SignatureFailure < RuntimeError; end
+
+  def self.sign(xml_string, private_key)
+    doc = self.xmlParseMemory(xml_string, xml_string.size)
+    raise SignatureFailure.new("could not parse XML document") if doc.null?
+
+    canonicalization_method_id = self.xmlSecTransformExclC14NGetKlass
+    sign_method_id = self.xmlSecOpenSSLTransformRsaSha1GetKlass
+
+    sign_node = self.xmlSecTmplSignatureCreate(doc, canonicalization_method_id, sign_method_id, nil)
+
+    raise SignatureFailure.new("failed to create signature template") if sign_node.null?
+    self.xmlAddChild(self.xmlDocGetRootElement(doc), sign_node)
+
+    ref_node = self.xmlSecTmplSignatureAddReference(sign_node, self.xmlSecOpenSSLTransformSha1GetKlass, nil, nil, nil)
+    raise SignatureFailure.new("failed to add a reference") if ref_node.null?
+
+    envelope_result = self.xmlSecTmplReferenceAddTransform(ref_node, self.xmlSecTransformEnvelopedGetKlass)
+    raise SignatureFailure.new("failed to add envelope transform to reference") if envelope_result.null?
+
+    key_info_node = self.xmlSecTmplSignatureEnsureKeyInfo(sign_node, nil)
+    raise SignatureFailure.new("failed to add key info") if key_info_node.null?
+
+    digital_signature_context = self.xmlSecDSigCtxCreate(nil)
+    raise SignatureFailure.new("failed to create signature context") if digital_signature_context.null?
+
+    digital_signature_context[:signKey] = self.xmlSecOpenSSLAppKeyLoad(private_key, :xmlSecKeyDataFormatPem, nil, nil, nil)
+    raise SignatureFailure.new("failed to load private pem ley from #{private_key}") if digital_signature_context[:signKey].null?
+
+    if self.xmlSecKeySetName(digital_signature_context[:signKey], File.basename(private_key)) < 0
+      raise SignatureFailure.new("failed to set key name for key of #{private_key}")
+    end
+
+    if self.xmlSecTmplKeyInfoAddKeyName(key_info_node, nil).null?
+      raise SignatureFailure.new("failed to add key info")
+    end
+
+    if self.xmlSecDSigCtxSign(digital_signature_context, sign_node) < 0
+      raise SignatureFailure.new("signature failed!")
+    end
+
+    ptr = FFI::MemoryPointer.new(:pointer, 1)
+    sizeptr = FFI::MemoryPointer.new(:pointer, 1)
+    self.xmlDocDumpFormatMemory(doc, ptr, sizeptr, 1)
+    strptr = ptr.read_pointer
+    result = strptr.null? ? nil : strptr.read_string
+  ensure
+    ptr.free if defined?(ptr) && ptr
+    sizeptr.free if defined?(sizeptr) && sizeptr
+    self.xmlFreeDoc(doc) if defined?(doc) && doc && !doc.null?
+    self.xmlSecDSigCtxDestroy(digital_signature_context) if defined?(digital_signature_context) && digital_signature_context && !digital_signature_context.null?
+    self.xmlFree(strptr) if defined?(strptr) && strptr && !strptr.null?
+  end
+
 end
