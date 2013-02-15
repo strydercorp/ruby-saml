@@ -192,6 +192,8 @@ module XMLSecurity
   attach_function :xmlSecEncCtxDecrypt, [ :pointer, :pointer ], :int
   attach_function :xmlSecEncCtxDestroy, [ :pointer ], :void
 
+  attach_function :xmlSecErrorsDefaultCallbackEnableOutput, [ :bool ], :void
+
   # libxml functions
   attach_function :xmlInitParser, [], :void
   attach_function :xmlDocGetRootElement, [ :pointer ], :pointer
@@ -202,6 +204,13 @@ module XMLSecurity
   raise "Failed initializing XMLSec" if self.xmlSecInit < 0
   raise "Failed initializing app crypto" if self.xmlSecOpenSSLAppInit(nil) < 0
   raise "Failed initializing crypto" if self.xmlSecOpenSSLInit < 0
+
+
+  def self.mute(&block)
+    xmlSecErrorsDefaultCallbackEnableOutput(false)
+    block.call
+    xmlSecErrorsDefaultCallbackEnableOutput(true)
+  end
 
   module SignedDocument
     attr_reader :validation_error
