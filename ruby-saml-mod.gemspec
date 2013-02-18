@@ -1,9 +1,9 @@
 Gem::Specification.new do |s|
   s.name = %q{ruby-saml-mod}
-  s.version = "0.1.19"
+  s.version = "0.1.20"
 
-  s.authors = ["OneLogin LLC", "Bracken", "Zach", "Cody", "Jeremy"]
-  s.date = %q{2012-09-26}
+  s.authors = ["OneLogin LLC", "Bracken", "Zach", "Cody", "Jeremy", "Paul"]
+  s.date = %q{2013-02-15}
   s.extra_rdoc_files = [
     "LICENSE"
   ]
@@ -25,9 +25,6 @@ Gem::Specification.new do |s|
   ]
   s.add_dependency('libxml-ruby', '>= 2.3.0')
   s.add_dependency('ffi')
-
-  s.add_development_dependency 'ruby-debug'
-  s.add_development_dependency 'rspec', '1.3.2'
 
   s.homepage = %q{http://github.com/bracken/ruby-saml}
   s.require_paths = ["lib"]

@@ -2,7 +2,7 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper.rb')
 
 require 'ruby-debug'
 require 'rexml/document'
-require 'CGI'
+require 'cgi'
 
 describe Onelogin::Saml::Response do
   describe "decrypting assertions" do
@@ -29,7 +29,9 @@ describe Onelogin::Saml::Response do
     
     it "should not be able to decrypt without the proper key" do
       @settings.xmlsec_privatekey = fixture_path("wrong-key.pem")
-      @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
+      XMLSecurity.mute do
+        @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
+      end
       document = REXML::Document.new(@response.document.to_s)
       REXML::XPath.first(document, "/samlp:Response/saml:Assertion").should be_nil
       @response.name_qualifier.should be_nil
@@ -41,7 +43,9 @@ describe Onelogin::Saml::Response do
     @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'def18dbed547cdf3d52b627f41637c443045fe33')
     @response = Onelogin::Saml::Response.new(@xmlb64)
     @response.process(@settings)
-    @response.should_not be_is_valid # this assertion was anonymized, breaking the digital signature
+    XMLSecurity.mute do
+      @response.should_not be_is_valid # this assertion was anonymized, breaking the digital signature
+    end
     @response.name_id.should == "zach@example.com"
     @response.name_qualifier.should == "http://saml.example.com:8080/opensso"
     @response.session_index.should == "s2c57ee92b5ca08e93d751987d591c58acc68d2501"

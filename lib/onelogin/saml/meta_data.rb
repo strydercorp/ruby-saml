@@ -21,6 +21,20 @@ module Onelogin::Saml
             </KeyDescriptor>
         }
       end
+      if settings.sign?
+        xml += %{
+            <KeyDescriptor use="signing">
+              <KeyInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
+                <X509Data>
+                  <X509Certificate>
+                    #{File.read(settings.xmlsec_certificate).gsub(/\w*-+(BEGIN|END) CERTIFICATE-+\w*/, "").strip}
+                  </X509Certificate>
+                </X509Data>
+              </KeyInfo>
+            </KeyDescriptor>
+        }
+      end
+
       xml += %{
             <SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="#{settings.sp_slo_url}"/>
       }

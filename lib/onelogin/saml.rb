@@ -2,6 +2,7 @@ require 'zlib'
 require "base64"
 require "xml/libxml"
 require "xml_sec"
+require "cgi"
 
 module Onelogin
   NAMESPACES = {
