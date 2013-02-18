@@ -2,7 +2,7 @@ require File.expand_path(File.dirname(__FILE__) + '/spec_helper.rb')
 
 require 'ruby-debug'
 require 'rexml/document'
-require 'CGI'
+require 'cgi'
 
 describe Onelogin::Saml::Response do
   describe "decrypting assertions" do
