@@ -355,6 +355,14 @@ module XMLSecurity
     end
 
     def decrypt_node(settings, xmlstr)
+      settings.all_private_keys.each do |key|
+        result = xmlsec_decrypt(xmlstr, key)
+        return result if result
+      end
+      nil
+    end
+
+    def xmlsec_decrypt(xmlstr, private_key)
       kmgr = nil
       ctx = nil
       doc = nil
@@ -363,7 +371,7 @@ module XMLSecurity
         kmgr = XMLSecurity.xmlSecKeysMngrCreate
         raise "Failed initializing key mgr" if XMLSecurity.xmlSecOpenSSLAppDefaultKeysMngrInit(kmgr) < 0
 
-        key = XMLSecurity.xmlSecOpenSSLAppKeyLoad(settings.xmlsec_privatekey, :xmlSecKeyDataFormatPem, nil, nil, nil)
+        key = XMLSecurity.xmlSecOpenSSLAppKeyLoad(private_key, :xmlSecKeyDataFormatPem, nil, nil, nil)
         raise "Failed loading key" if key.null?
         raise "Failed adding key to mgr" if XMLSecurity.xmlSecOpenSSLAppDefaultKeysMngrAdoptKey(kmgr, key) < 0
 

@@ -32,9 +32,24 @@ describe Onelogin::Saml::Response do
       XMLSecurity.mute do
         @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
       end
-      document = REXML::Document.new(@response.document.to_s)
+      document = REXML::Document.new(@response.decrypted_document.to_s)
       REXML::XPath.first(document, "/samlp:Response/saml:Assertion").should be_nil
       @response.name_qualifier.should be_nil
+    end
+
+    it "should be able to decrypt using additional private keys" do
+      @settings.xmlsec_privatekey = fixture_path("wrong-key.pem")
+      @settings.xmlsec_additional_privatekeys = [fixture_path("test1-key.pem")]
+      XMLSecurity.mute do
+        @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
+      end
+      document = REXML::Document.new(@response.decrypted_document.to_s)
+      REXML::XPath.first(document, "/samlp:Response/saml:Assertion").should_not be_nil
+      REXML::XPath.first(document, "/samlp:Response/saml:Assertion/ds:Signature/ds:SignedInfo/ds:Reference/ds:DigestValue").text.should == "eMQal6uuWKMbUMbOwBfrFH90bzE="
+      @response.name_qualifier.should == "http://saml.example.com:8080/opensso"
+      @response.session_index.should == "s2c57ee92b5ca08e93d751987d591c58acc68d2501"
+      @response.status_code.should == "urn:oasis:names:tc:SAML:2.0:status:Success"
+      @response.status_message.strip.should == ""
     end
   end
   

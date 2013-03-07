@@ -52,7 +52,15 @@ module Onelogin::Saml
     
     # The PEM-encoded private key
     attr_accessor :xmlsec_privatekey
-    
+
+    # Additional private keys to attempt decryption with
+    # To be used for key rotation
+    attr_accessor :xmlsec_additional_privatekeys
+
+    def all_private_keys
+      Array(xmlsec_additional_privatekeys).unshift(xmlsec_privatekey).compact
+    end
+
     def encryption_configured?
       !!self.xmlsec_privatekey
     end
