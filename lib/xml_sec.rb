@@ -184,6 +184,7 @@ module XMLSecurity
   attach_function :xmlSecKeysMngrCreate, [], :pointer
   attach_function :xmlSecOpenSSLAppDefaultKeysMngrInit, [ :pointer ], :int
   attach_function :xmlSecOpenSSLAppKeyLoad, [ :string, :xmlSecKeyDataFormat, :pointer, :pointer, :pointer ], :pointer
+  attach_function :xmlSecOpenSSLAppKeyCertLoad, [ :pointer, :string, :xmlSecKeyDataFormat], :int
   attach_function :xmlSecOpenSSLAppKeyLoadMemory, [ :pointer, :uint, :xmlSecKeyDataFormat, :pointer, :pointer, :pointer ], :pointer
   attach_function :xmlSecOpenSSLAppDefaultKeysMngrAdoptKey, [ :pointer, :pointer ], :int
   attach_function :xmlSecKeysMngrDestroy, [ :pointer ], :void
@@ -207,6 +208,7 @@ module XMLSecurity
   attach_function :xmlSecKeySetName, [ :pointer, :string ], :int
 
   attach_function :xmlSecTmplKeyInfoAddKeyName, [ :pointer, :pointer ], :pointer
+  attach_function :xmlSecTmplKeyInfoAddX509Data, [ :pointer ], :pointer
 
   attach_function :xmlSecDSigCtxSign, [ :pointer, :pointer ], :int
 
@@ -308,11 +310,7 @@ module XMLSecurity
         doc = XMLSecurity.xmlSecParseMemory(xml, xml.length, 0)
         root = XMLSecurity.xmlDocGetRootElement(doc)
 
-        # add the ID attribute as an id. yeah, hacky
-        idary = FFI::MemoryPointer.new(:pointer, 2)
-        idary[0].put_pointer(0, FFI::MemoryPointer.from_string("ID"))
-        idary[1].put_pointer(0, nil)
-        XMLSecurity.xmlSecAddIDs(doc, root, idary)
+        XMLSecurity.register_xml_id_attribute(doc, root)
 
         # get the root node, and then find the signature
         node = XMLSecurity.xmlSecFindNode(root, "Signature", "http://www.w3.org/2000/09/xmldsig#")
@@ -402,7 +400,7 @@ module XMLSecurity
 
   class SignatureFailure < RuntimeError; end
 
-  def self.sign(xml_string, private_key)
+  def self.sign(reference_id, xml_string, private_key, certificate)
     doc = self.xmlParseMemory(xml_string, xml_string.size)
     raise SignatureFailure.new("could not parse XML document") if doc.null?
 
@@ -412,9 +410,12 @@ module XMLSecurity
     sign_node = self.xmlSecTmplSignatureCreate(doc, canonicalization_method_id, sign_method_id, nil)
 
     raise SignatureFailure.new("failed to create signature template") if sign_node.null?
-    self.xmlAddChild(self.xmlDocGetRootElement(doc), sign_node)
+    root = self.xmlDocGetRootElement(doc)
+    self.xmlAddChild(root, sign_node)
 
-    ref_node = self.xmlSecTmplSignatureAddReference(sign_node, self.xmlSecOpenSSLTransformSha1GetKlass, nil, nil, nil)
+    XMLSecurity.register_xml_id_attribute(doc, root)
+
+    ref_node = self.xmlSecTmplSignatureAddReference(sign_node, self.xmlSecOpenSSLTransformSha1GetKlass, nil, reference_id && "##{reference_id}", nil)
     raise SignatureFailure.new("failed to add a reference") if ref_node.null?
 
     envelope_result = self.xmlSecTmplReferenceAddTransform(ref_node, self.xmlSecTransformEnvelopedGetKlass)
@@ -427,15 +428,14 @@ module XMLSecurity
     raise SignatureFailure.new("failed to create signature context") if digital_signature_context.null?
 
     digital_signature_context[:signKey] = self.xmlSecOpenSSLAppKeyLoad(private_key, :xmlSecKeyDataFormatPem, nil, nil, nil)
-    raise SignatureFailure.new("failed to load private pem ley from #{private_key}") if digital_signature_context[:signKey].null?
+    raise SignatureFailure.new("failed to load private pem key from #{private_key}") if digital_signature_context[:signKey].null?
 
-    if self.xmlSecKeySetName(digital_signature_context[:signKey], File.basename(private_key)) < 0
-      raise SignatureFailure.new("failed to set key name for key of #{private_key}")
+    if self.xmlSecOpenSSLAppKeyCertLoad(digital_signature_context[:signKey], certificate, :xmlSecKeyDataFormatPem) < 0
+      raise SignatureFailure.new("failed to load public cert from #{certificate}")
     end
 
-    if self.xmlSecTmplKeyInfoAddKeyName(key_info_node, nil).null?
-      raise SignatureFailure.new("failed to add key info")
-    end
+    x509_data_node = self.xmlSecTmplKeyInfoAddX509Data(key_info_node)
+    raise SignatureFailure.new("failed to add <dsig:X509Data/> node") if x509_data_node.null?
 
     if self.xmlSecDSigCtxSign(digital_signature_context, sign_node) < 0
       raise SignatureFailure.new("signature failed!")
@@ -443,9 +443,10 @@ module XMLSecurity
 
     ptr = FFI::MemoryPointer.new(:pointer, 1)
     sizeptr = FFI::MemoryPointer.new(:pointer, 1)
-    self.xmlDocDumpFormatMemory(doc, ptr, sizeptr, 1)
+    self.xmlDocDumpFormatMemory(doc, ptr, sizeptr, 0)
     strptr = ptr.read_pointer
-    result = strptr.null? ? nil : strptr.read_string
+
+    return strptr.null? ? nil : strptr.read_string
   ensure
     ptr.free if defined?(ptr) && ptr
     sizeptr.free if defined?(sizeptr) && sizeptr
@@ -454,4 +455,25 @@ module XMLSecurity
     self.xmlFree(strptr) if defined?(strptr) && strptr && !strptr.null?
   end
 
+
+  #
+  # Register 'ID' as an XML id attribute so we can properly sign/validate
+  # signatures with references of the form:
+  #
+  #   <dsig:Reference URI="#IdOfElementImSigning" />
+  #
+  # Which refer to another element in the same document like:
+  #
+  #   <elem ID="IdOfElementImSigning" />
+  #
+  # For more information see:
+  #
+  #   http://www.aleksey.com/xmlsec/faq.html#section_3_4
+  #
+  def self.register_xml_id_attribute(doc, root)
+    idary = FFI::MemoryPointer.new(:pointer, 2)
+    idary[0].put_pointer(0, FFI::MemoryPointer.from_string("ID"))
+    idary[1].put_pointer(0, nil)
+    XMLSecurity.xmlSecAddIDs(doc, root, idary)
+  end
 end
