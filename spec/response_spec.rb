@@ -17,9 +17,8 @@ describe Onelogin::Saml::Response do
     it "should find the right attributes from an encrypted assertion" do
       @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
       @response.should be_is_valid
-      document = REXML::Document.new(@response.decrypted_document.to_s)
-      REXML::XPath.first(document, "/samlp:Response/saml:Assertion").should_not be_nil
-      REXML::XPath.first(document, "/samlp:Response/saml:Assertion/ds:Signature/ds:SignedInfo/ds:Reference/ds:DigestValue").text.should == "eMQal6uuWKMbUMbOwBfrFH90bzE="
+
+      @response.name_id.should == "zach@zwily.com"
       @response.name_qualifier.should == "http://saml.example.com:8080/opensso"
       @response.session_index.should == "s2c57ee92b5ca08e93d751987d591c58acc68d2501"
       @response.status_code.should == "urn:oasis:names:tc:SAML:2.0:status:Success"
@@ -56,10 +55,8 @@ describe Onelogin::Saml::Response do
     @xmlb64 = Base64.encode64(File.read(fixture_path("test2-response.xml")))
     @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'def18dbed547cdf3d52b627f41637c443045fe33')
     @response = Onelogin::Saml::Response.new(@xmlb64)
+    @response.disable_signature_validation!(@settings)
     @response.process(@settings)
-    XMLSecurity.mute do
-      @response.should_not be_is_valid # this assertion was anonymized, breaking the digital signature
-    end
     @response.name_id.should == "zach@example.com"
     @response.name_qualifier.should == "http://saml.example.com:8080/opensso"
     @response.session_index.should == "s2c57ee92b5ca08e93d751987d591c58acc68d2501"
@@ -69,6 +66,25 @@ describe Onelogin::Saml::Response do
     @response.status_message.should == ""
     @response.fingerprint_from_idp.should == 'def18dbed547cdf3d52b627f41637c443045fe33'
     @response.issuer.should == 'http://saml.example.com:8080/opensso'
+  end
+
+  it "should protect against xml signature wrapping attacks targeting nameid" do
+    @xmlb64 = Base64.encode64(File.read(fixture_path("xml_signature_wrapping_attack_response_nameid.xml")))
+    @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'afe71c28ef740bc87425be13a2263d37971da1f9')
+    @response = Onelogin::Saml::Response.new(@xmlb64)
+    @response.process(@settings)
+    @response.should be_is_valid
+    @response.name_id.should == "_3b3e7714b72e29dc4290321a075fa0b73333a4f25f"
+  end
+
+  it "should protect against xml signature wrapping attacks targeting attributes" do
+    @xmlb64 = Base64.encode64(File.read(fixture_path("xml_signature_wrapping_attack_response_attributes.xml")))
+    @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'afe71c28ef740bc87425be13a2263d37971da1f9')
+    @response = Onelogin::Saml::Response.new(@xmlb64)
+    @response.process(@settings)
+    @response.should be_is_valid
+    @response.saml_attributes['eduPersonAffiliation'].should == 'member'
+    @response.saml_attributes['eduPersonPrincipalName'].should == 'student@example.edu'
   end
 
   it "should map OIDs to known attributes" do

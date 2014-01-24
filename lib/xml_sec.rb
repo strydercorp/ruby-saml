@@ -267,6 +267,29 @@ module XMLSecurity
       "-----BEGIN PUBLIC KEY-----\n#{base64}-----END PUBLIC KEY-----"
     end
 
+    def has_signature?
+      signatures.any?
+    end
+
+    def signed_roots
+      signatures.map do |sig|
+        ref = sig.find('.//ds:Reference', Onelogin::NAMESPACES).first
+        signed_element_id = ref['URI'].sub(/^#/, '')
+
+        if signed_element_id.empty?
+          self.root
+        else
+          xpath_id_query = %Q(ancestor::*[@ID = "#{signed_element_id}"])
+
+          ref.find(xpath_id_query, Onelogin::NAMESPACES).first
+        end
+      end.compact
+    end
+
+    def signatures
+      @signatures ||= self.find("//ds:Signature", Onelogin::NAMESPACES)
+    end
+
     def validate(idp_cert_fingerprint, logger = nil)
       # get cert from response
       base64_cert = self.find_first("//ds:X509Certificate", Onelogin::NAMESPACES).content
