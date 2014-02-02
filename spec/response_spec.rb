@@ -87,6 +87,14 @@ describe Onelogin::Saml::Response do
     @response.saml_attributes['eduPersonPrincipalName'].should == 'student@example.edu'
   end
 
+  it "should protect against xml signature wrapping attacks with duplicate IDs" do
+    @xmlb64 = Base64.encode64(File.read(fixture_path('xml_signature_wrapping_attack_duplicate_ids.xml')))
+    @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => '7292914fc5bffa6f3fe1e43fd47c205395fecfa2')
+    @response = Onelogin::Saml::Response.new(@xmlb64)
+    @response.process(@settings)
+    @response.should_not be_is_valid
+  end
+
   it "should map OIDs to known attributes" do
     @xmlb64 = Base64.encode64(File.read(fixture_path("test3-response.xml")))
     @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'afe71c28ef740bc87425be13a2263d37971da1f9')
