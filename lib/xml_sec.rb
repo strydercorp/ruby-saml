@@ -79,6 +79,9 @@ module XMLSecurity
       :xmlSecDSigStatusInvalid
   ]
 
+  XMLSEC_ERRORS_R_INVALID_DATA = 12
+  class XmlSecError < ::RuntimeError; end
+
   class XmlSecPtrList < FFI::Struct
     layout \
       :id,                          :string,
@@ -170,6 +173,12 @@ module XMLSecurity
       :reserved1,                   :pointer
   end
 
+  ErrorCallback = FFI::Function.new(:void,
+      [ :string, :int, :string, :string,     :string,      :int,   :string ]
+  ) do |file,    line, func,    errorObject, errorSubject, reason, msg     |
+    XMLSecurity.handle_xmlsec_error_callback(file, line, func, errorObject, errorSubject, reason, msg)
+  end
+
   # xmlsec functions
   attach_function :xmlSecInit, [], :int
   attach_function :xmlSecParseMemory, [ :pointer, :uint, :int ], :pointer
@@ -193,7 +202,9 @@ module XMLSecurity
   attach_function :xmlSecEncCtxDecrypt, [ :pointer, :pointer ], :int
   attach_function :xmlSecEncCtxDestroy, [ :pointer ], :void
 
+  attach_function :xmlSecErrorsDefaultCallback, [ :string, :int, :string, :string, :string, :int, :string ], :void
   attach_function :xmlSecErrorsDefaultCallbackEnableOutput, [ :bool ], :void
+  attach_function :xmlSecErrorsSetCallback, [:pointer], :void
 
   attach_function :xmlSecTransformExclC14NGetKlass, [], :pointer
   attach_function :xmlSecOpenSSLTransformRsaSha1GetKlass, [], :pointer
@@ -238,6 +249,18 @@ module XMLSecurity
   raise "Failed initializing XMLSec" if self.xmlSecInit < 0
   raise "Failed initializing app crypto" if self.xmlSecOpenSSLAppInit(nil) < 0
   raise "Failed initializing crypto" if self.xmlSecOpenSSLInit < 0
+  self.xmlSecErrorsSetCallback(ErrorCallback)
+
+  def self.handle_xmlsec_error_callback(*args)
+    raise_exception_if_necessary(*args)
+    xmlSecErrorsDefaultCallback(*args)
+  end
+
+  def self.raise_exception_if_necessary(file, line, func, errorObject, errorSubject, reason, msg)
+    if reason == XMLSEC_ERRORS_R_INVALID_DATA
+      raise XmlSecError.new(msg)
+    end
+  end
 
 
   def self.mute(&block)
