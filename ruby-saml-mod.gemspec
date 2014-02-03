@@ -1,9 +1,9 @@
 Gem::Specification.new do |s|
   s.name = %q{ruby-saml-mod}
-  s.version = "0.1.23"
+  s.version = "0.1.24"
 
   s.authors = ["OneLogin LLC", "Bracken", "Zach", "Cody", "Jeremy", "Paul"]
-  s.date = %q{2014-01-25}
+  s.date = %q{2014-02-02}
   s.extra_rdoc_files = [
     "LICENSE"
   ]
