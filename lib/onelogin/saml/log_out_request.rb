@@ -25,7 +25,7 @@ module Onelogin::Saml
       REQUEST_XML
 
       deflated_logout_request = Zlib::Deflate.deflate(@request_xml, 9)[2..-5]
-      base64_logout_request = Base64.encode64(deflated_logout_request)
+      base64_logout_request = Base64.strict_encode64(deflated_logout_request)
 
       url, existing_query_string = @settings.idp_slo_target_url.split('?')
       query_string = _query_string_append(existing_query_string, 'SAMLRequest', base64_logout_request)
