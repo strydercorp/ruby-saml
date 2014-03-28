@@ -11,11 +11,11 @@ module Onelogin::Saml
       ar = LogOutRequest.new(settings, session)
       ar.generate_request
     end
-    
+
     def generate_request
       @id = Onelogin::Saml::AuthRequest.generate_unique_id(42)
       issue_instant = Onelogin::Saml::AuthRequest.get_timestamp
-      
+
       @request_xml = <<-REQUEST_XML
 <samlp:LogoutRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" ID="#{@id}" Version="2.0" IssueInstant="#{issue_instant}" Destination="#{@settings.idp_slo_target_url}">
   <saml:Issuer xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">#{@settings.issuer}</saml:Issuer>
@@ -23,10 +23,6 @@ module Onelogin::Saml
   <samlp:SessionIndex xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol">#{@session[:session_index]}</samlp:SessionIndex>
 </samlp:LogoutRequest>
       REQUEST_XML
-
-      if settings.sign?
-        @request_xml = XMLSecurity.sign(@id, @request_xml, @settings.xmlsec_privatekey, @settings.xmlsec_certificate)
-      end
 
       deflated_logout_request = Zlib::Deflate.deflate(@request_xml, 9)[2..-5]
       base64_logout_request = Base64.encode64(deflated_logout_request)
@@ -41,7 +37,7 @@ module Onelogin::Saml
       end
 
       @forward_url = [url, query_string].join("?")
-  
+
       @forward_url
     end
 

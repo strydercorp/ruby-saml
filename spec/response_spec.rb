@@ -1,6 +1,5 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper.rb')
 
-require 'ruby-debug'
 require 'rexml/document'
 require 'cgi'
 
@@ -14,7 +13,7 @@ describe Onelogin::Saml::Response do
         :idp_cert_fingerprint => 'def18dbed547cdf3d52b627f41637c443045fe33'
       )
     end
-    
+
     it "should find the right attributes from an encrypted assertion" do
       @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
       @response.should be_is_valid
@@ -26,7 +25,7 @@ describe Onelogin::Saml::Response do
       @response.status_code.should == "urn:oasis:names:tc:SAML:2.0:status:Success"
       @response.status_message.strip.should == ""
     end
-    
+
     it "should not be able to decrypt without the proper key" do
       @settings.xmlsec_privatekey = fixture_path("wrong-key.pem")
       XMLSecurity.mute do
@@ -52,7 +51,7 @@ describe Onelogin::Saml::Response do
       @response.status_message.strip.should == ""
     end
   end
-  
+
   it "should use namespaces correctly to look up attributes" do
     @xmlb64 = Base64.encode64(File.read(fixture_path("test2-response.xml")))
     @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'def18dbed547cdf3d52b627f41637c443045fe33')
@@ -85,7 +84,7 @@ describe Onelogin::Saml::Response do
 
   it "should not throw an exception when an empty string is passed as the doc" do
     settings = Onelogin::Saml::Settings.new
-    lambda { 
+    lambda {
       r = Onelogin::Saml::Response.new('foo', settings)
       r.should_not be_is_valid
     }.should_not raise_error
