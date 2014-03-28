@@ -8,24 +8,6 @@ def verify_query_string_signature(settings, forward_url)
   cert.public_key.verify(OpenSSL::Digest::SHA1.new, Base64.decode64(CGI.unescape(signature)), signed_data)
 end
 
-def verify_xml_signature(settings, forward_url)
-  forward_url = URI.parse(forward_url)
-  cgi_encoded_logout_request = forward_url.query.split('&').first.split('=').last
-  base64_logout_request      = CGI.unescape(cgi_encoded_logout_request)
-  deflated_logout_request    = Base64.decode64(base64_logout_request)
-  logout_request             = inflate(deflated_logout_request)
-
-  log_out_xml = LibXML::XML::Document.string(logout_request)
-  log_out_xml.extend(XMLSecurity::SignedDocument)
-
-  result = log_out_xml.validate(settings.idp_cert_fingerprint, nil)
-  if result
-    result
-  else
-    log_out_xml.validation_error
-  end
-end
-
 # see http://stackoverflow.com/questions/1361892/how-to-decompress-gzip-string-in-ruby
 def inflate(string)
   zstream = Zlib::Inflate.new(-Zlib::MAX_WBITS)
@@ -64,22 +46,7 @@ describe Onelogin::Saml::LogOutRequest do
     log_out_xml.find_first('/samlp:LogoutRequest/saml:NameID', Onelogin::NAMESPACES).attributes['Format'].should == Onelogin::Saml::NameIdentifiers::UNSPECIFIED
   end
 
-  it "can sign the generated request XML" do
-    settings = Onelogin::Saml::Settings.new(
-      :xmlsec_certificate => fixture_path("test1-cert.pem"),
-      :xmlsec_privatekey => fixture_path("test1-key.pem"),
-      :idp_slo_target_url => "http://idp.example.com/saml2",
-      :idp_cert_fingerprint => 'c38e789fcfbbd4727bd8ff7fc365b44fc3596bda'
-    )
-    session = {}
-
-    log_out_request = Onelogin::Saml::LogOutRequest.new(settings, session)
-    forward_url = log_out_request.generate_request
-
-    verify_xml_signature(settings, forward_url).should == true
-  end
-
-  it "includes the certificate in the <KeyInfo> of the signature" do
+  it "does not include the signature in the request xml" do
     settings = Onelogin::Saml::Settings.new(
       :xmlsec_certificate => fixture_path("test1-cert.pem"),
       :xmlsec_privatekey => fixture_path("test1-key.pem"),
@@ -92,12 +59,7 @@ describe Onelogin::Saml::LogOutRequest do
     log_out_request.generate_request
 
     log_out_xml = LibXML::XML::Document.string(log_out_request.request_xml)
-
-    base64_cert_der = Base64.encode64(OpenSSL::X509::Certificate.new(File.read(settings.xmlsec_certificate)).to_der).chomp
-
-    x509_certificate_node = log_out_xml.find_first('/samlp:LogoutRequest/ds:Signature/ds:KeyInfo/ds:X509Data/ds:X509Certificate', Onelogin::NAMESPACES)
-    x509_certificate_node.should be_instance_of LibXML::XML::Node
-    x509_certificate_node.content.gsub("\n", '').should == base64_cert_der.gsub("\n", '')
+    log_out_xml.find_first('/samlp:LogoutRequest/ds:Signature', Onelogin::NAMESPACES).should be_nil
   end
 
   it "can sign the generated query string" do
@@ -126,7 +88,7 @@ describe Onelogin::Saml::LogOutRequest do
 
     log_out_request = Onelogin::Saml::LogOutRequest.new(settings, session)
     forward_url = log_out_request.generate_request
-    
+
     forward_url.should match(%r{^http://idp.example.com/saml2\?existing=param&})
     verify_query_string_signature(settings, forward_url).should be_true
   end

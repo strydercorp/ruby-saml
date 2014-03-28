@@ -1,6 +1,5 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper.rb')
 
-require 'ruby-debug'
 require 'rexml/document'
 
 describe Onelogin::Saml::MetaData do
