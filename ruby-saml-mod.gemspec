@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = %q{ruby-saml-mod}
-  s.version = "0.1.22"
+  s.version = "0.1.26"
 
   s.authors = ["OneLogin LLC", "Bracken", "Zach", "Cody", "Jeremy", "Paul"]
   s.date = %q{2013-05-07}
