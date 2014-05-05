@@ -30,7 +30,7 @@ module Onelogin::Saml
       @request_xml += "</samlp:AuthnRequest>"
 
       deflated_request  = Zlib::Deflate.deflate(@request_xml, 9)[2..-5]     
-      base64_request    = Base64.encode64(deflated_request)  
+      base64_request    = Base64.strict_encode64(deflated_request)
       encoded_request   = CGI.escape(base64_request)
 
       @forward_url = @settings.idp_sso_target_url + (@settings.idp_sso_target_url.include?("?") ? "&" : "?") + "SAMLRequest=" + encoded_request
