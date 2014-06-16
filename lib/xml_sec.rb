@@ -84,7 +84,7 @@ module XMLSecurity
 
   class XmlSecPtrList < FFI::Struct
     layout \
-      :id,                          :string,
+      :id,                          :pointer,
       :data,                        :pointer,        # xmlSecPtr*
       :use,                         :uint,
       :max,                         :uint,
@@ -120,6 +120,19 @@ module XMLSecurity
       :reserved1,                   :pointer         # void *
   end
 
+  class XmlSecTransformUriType
+    None         = 0x0000
+    Empty        = 0x0001
+    SameDocument = 0x0002
+    Local        = 0x0004
+    Remote       = 0x0008
+    Any          = 0xFFFF
+
+    def self.conservative
+      (Empty | SameDocument)
+    end
+  end
+
   class XmlSecKeyInfoCtx < FFI::Struct
     layout \
       :userDate,                    :pointer,
@@ -152,7 +165,7 @@ module XMLSecurity
       :keyInfoWriteCtx,             XmlSecKeyInfoCtx.by_value,
       :transformCtx,                XmlSecTransformCtx.by_value,
       :enabledReferenceUris,        :uint,        # xmlSecTransformUriType
-      :enabledReferenceTransforms,  :pointer,     # xmlSecPtrListPtr
+      :enabledReferenceTransforms,  XmlSecPtrList.by_ref,     # xmlSecPtrListPtr
       :referencePreExecuteCallback, :pointer,     # xmlSecTransformCtxPreExecuteCallback
       :defSignMethodId,             :string,      # xmlSecTransformId
       :defC14NMethodId,             :string,      # xmlSecTransformId
@@ -223,8 +236,12 @@ module XMLSecurity
 
   attach_function :xmlSecDSigCtxSign, [ :pointer, :pointer ], :int
 
-
-
+  attach_function :xmlSecDSigCtxEnableReferenceTransform, [ :pointer, :pointer ], :int
+  attach_function :xmlSecPtrListAdd, [ :pointer, :pointer ], :int
+  attach_function :xmlSecPtrListGetItem, [ :pointer, :uint ], :pointer
+  attach_function :xmlSecPtrListGetSize, [ :pointer ], :uint
+  attach_function :xmlSecTransformIdsGet, [], :pointer
+  attach_function :xmlSecTransformXsltGetKlass, [], :pointer
 
   # libxml functions
   attach_function :xmlInitParser, [], :void
@@ -267,6 +284,23 @@ module XMLSecurity
     xmlSecErrorsDefaultCallbackEnableOutput(false)
     block.call
     xmlSecErrorsDefaultCallbackEnableOutput(true)
+  end
+
+  def self.disable_xslt_transforms!(dsig_context)
+    all_transforms = XMLSecurity.xmlSecTransformIdsGet
+
+    (0...XMLSecurity.xmlSecPtrListGetSize(all_transforms)).each do |pos|
+      transform = XMLSecurity.xmlSecPtrListGetItem(all_transforms, pos)
+      unless transform == XMLSecurity.xmlSecTransformXsltGetKlass
+        XMLSecurity.xmlSecPtrListAdd(dsig_context[:transformCtx][:enabledTransforms], transform)
+        XMLSecurity.xmlSecDSigCtxEnableReferenceTransform(dsig_context, transform)
+      end
+    end
+  end
+
+  def self.disable_remote_references!(dsig_context)
+    dsig_context[:transformCtx][:enabledUris] = XmlSecTransformUriType.conservative
+    dsig_context[:enabledReferenceUris] = XmlSecTransformUriType.conservative
   end
 
   module SignedDocument
@@ -365,6 +399,9 @@ module XMLSecurity
         # create the sig context
         ctx = XMLSecurity.xmlSecDSigCtxCreate(kmgr)
         raise "failed creating digital signature context" if ctx.null?
+
+        XMLSecurity.disable_xslt_transforms!(ctx)
+        XMLSecurity.disable_remote_references!(ctx)
 
         # verify!
         raise "failed verifying dsig" if XMLSecurity.xmlSecDSigCtxVerify(ctx, node) < 0

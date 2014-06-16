@@ -51,6 +51,30 @@ describe Onelogin::Saml::Response do
     end
   end
 
+  it "should not verify when XSLT transforms are being used" do
+    @xmlb64 = Base64.encode64(File.read(fixture_path("test4-response.xml")))
+    @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'bc71f7bacb36011694405dd0e2beafcc069de45f')
+    @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
+
+    XMLSecurity.mute do
+      @response.should_not be_is_valid
+    end
+
+    TestServer.requests.should == []
+  end
+
+  it "should not allow external reference URIs" do
+    @xmlb64 = Base64.encode64(File.read(fixture_path("test5-response.xml")))
+    @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'bc71f7bacb36011694405dd0e2beafcc069de45f')
+    @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
+
+    XMLSecurity.mute do
+      @response.should_not be_is_valid
+    end
+
+    TestServer.requests.should == []
+  end
+
   it "should use namespaces correctly to look up attributes" do
     @xmlb64 = Base64.encode64(File.read(fixture_path("test2-response.xml")))
     @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'def18dbed547cdf3d52b627f41637c443045fe33')
