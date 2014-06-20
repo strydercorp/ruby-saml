@@ -7,3 +7,11 @@ Spec::Rake::SpecTask.new('spec') do |t|
 end
 
 task :default => :spec
+
+namespace :vagrant do
+  desc 'run tests in an ubuntu 12.04 vagrant vm'
+  task :spec do
+    sh 'vagrant ssh -c "cd /vagrant; bundle check || bundle install"'
+    sh 'vagrant ssh -c "cd /vagrant; bundle exec rake spec"'
+  end
+end
