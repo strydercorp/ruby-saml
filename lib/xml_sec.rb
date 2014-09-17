@@ -365,12 +365,16 @@ module XMLSecurity
 
       # create a copy of the document with the certificate removed
       doc = LibXML::XML::Document.new
+      doc.encoding = self.encoding == XML::Encoding::NONE ? XML::Encoding::ISO_8859_1 : self.encoding
       doc.root = doc.import(self.root)
       sigcert = doc.find_first("//ds:Signature/ds:KeyInfo", Onelogin::NAMESPACES)
       sigcert.remove!
 
+      # Force encoding of the xml and the xml string for validation
+      xml = doc.to_s(:indent => false, :encoding => doc.encoding).encode(doc.rb_encoding)
+
       # validate it!
-      validate_doc(doc.to_s(:indent => false), SignedDocument.format_cert(cert))
+      validate_doc(xml, SignedDocument.format_cert(cert))
     end
 
     def validate_doc(xml, pem)

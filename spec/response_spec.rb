@@ -119,6 +119,18 @@ describe Onelogin::Saml::Response do
     @response.should_not be_is_valid
   end
 
+  it "should allow non-ascii characters in attributes" do
+    @xmlb64 = Base64.encode64(File.read(fixture_path("test6-response.xml")))
+    @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'afe71c28ef740bc87425be13a2263d37971da1f9')
+    @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
+    @response.should be_is_valid
+    @response.status_code.should == "urn:oasis:names:tc:SAML:2.0:status:Success"
+    @response.saml_attributes['eduPersonAffiliation'].should == 'member'
+    @response.saml_attributes['givenName'].should == 'Canvas'
+    @response.saml_attributes['displayName'].should == 'Canvas Üser'
+    @response.fingerprint_from_idp.should == 'afe71c28ef740bc87425be13a2263d37971da1f9'
+  end
+
   it "should map OIDs to known attributes" do
     @xmlb64 = Base64.encode64(File.read(fixture_path("test3-response.xml")))
     @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'afe71c28ef740bc87425be13a2263d37971da1f9')
