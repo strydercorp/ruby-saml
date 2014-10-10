@@ -1,7 +1,4 @@
-require File.expand_path(File.dirname(__FILE__) + '/spec_helper.rb')
-
-require 'rexml/document'
-require 'cgi'
+require 'spec_helper'
 
 describe Onelogin::Saml::Response do
   describe "decrypting assertions" do
@@ -168,7 +165,7 @@ describe Onelogin::Saml::Response do
       forward_url[0...prefix.size].should eql(prefix)
 
       session = { :name_qualifier => 'foo', :name_id => 'bar', :session_index => 'baz' }
-      forward_url = Onelogin::Saml::LogOutRequest::create(settings, session)
+      forward_url = Onelogin::Saml::LogoutRequest::create(settings, session)
       prefix = "http://example.com/logout.php?SAMLRequest="
       forward_url[0...prefix.size].should eql(prefix)
     end
@@ -186,7 +183,7 @@ describe Onelogin::Saml::Response do
       forward_url[0...prefix.size].should eql(prefix)
 
       session = { :name_qualifier => 'foo', :name_id => 'bar', :session_index => 'baz' }
-      forward_url = Onelogin::Saml::LogOutRequest::create(settings, session)
+      forward_url = Onelogin::Saml::LogoutRequest::create(settings, session)
       prefix = "http://example.com/logout.php?param=foo&SAMLRequest="
       forward_url[0...prefix.size].should eql(prefix)
     end

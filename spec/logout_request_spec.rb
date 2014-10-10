@@ -16,7 +16,7 @@ def inflate(string)
   buf
 end
 
-describe Onelogin::Saml::LogOutRequest do
+describe Onelogin::Saml::LogoutRequest do
   it "includes destination in the saml:LogoutRequest attributes" do
     settings = Onelogin::Saml::Settings.new(
       :xmlsec_certificate => fixture_path("test1-cert.pem"),
@@ -25,7 +25,7 @@ describe Onelogin::Saml::LogOutRequest do
       :idp_cert_fingerprint => 'def18dbed547cdf3d52b627f41637c443045fe33'
     )
     session = {}
-    logout_request = Onelogin::Saml::LogOutRequest.new(settings, session)
+    logout_request = Onelogin::Saml::LogoutRequest.new(settings, session)
     logout_request.generate_request
 
     logout_xml = LibXML::XML::Document.string(logout_request.request_xml)
@@ -38,7 +38,7 @@ describe Onelogin::Saml::LogOutRequest do
       :name_identifier_format => Onelogin::Saml::NameIdentifiers::UNSPECIFIED
     )
     session = {}
-    logout_request = Onelogin::Saml::LogOutRequest.new(settings, session)
+    logout_request = Onelogin::Saml::LogoutRequest.new(settings, session)
     logout_request.generate_request
 
     logout_xml = LibXML::XML::Document.string(logout_request.request_xml)
@@ -54,7 +54,7 @@ describe Onelogin::Saml::LogOutRequest do
     )
     session = {}
 
-    logout_request = Onelogin::Saml::LogOutRequest.new(settings, session)
+    logout_request = Onelogin::Saml::LogoutRequest.new(settings, session)
     logout_request.generate_request
 
     logout_xml = LibXML::XML::Document.string(logout_request.request_xml)
@@ -70,7 +70,7 @@ describe Onelogin::Saml::LogOutRequest do
     )
     session = {}
 
-    logout_request = Onelogin::Saml::LogOutRequest.new(settings, session)
+    logout_request = Onelogin::Saml::LogoutRequest.new(settings, session)
     forward_url = logout_request.generate_request
 
     verify_query_string_signature(settings, forward_url).should be_true
@@ -85,7 +85,7 @@ describe Onelogin::Saml::LogOutRequest do
     )
     session = {}
 
-    logout_request = Onelogin::Saml::LogOutRequest.new(settings, session)
+    logout_request = Onelogin::Saml::LogoutRequest.new(settings, session)
     forward_url = logout_request.generate_request
 
     forward_url.should match(%r{^http://idp.example.com/saml2\?existing=param&})
