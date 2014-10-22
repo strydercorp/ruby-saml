@@ -1,9 +1,12 @@
-require 'spec'
+require 'rexml/document'
+require 'cgi'
+require 'uri'
+
 require File.expand_path(File.dirname(__FILE__) + '/../lib/onelogin/saml.rb')
 
 Dir[File.expand_path(File.dirname(__FILE__) + '/support/**/*.rb')].each { |f| require f }
 
-Spec::Runner.configure do |config|
+RSpec.configure do |config|
   FIXTURE_PATH = File.expand_path(File.dirname(__FILE__) + '/fixtures')
 
   def fixture_path(filename)
@@ -21,4 +24,10 @@ Spec::Runner.configure do |config|
   config.after(:suite) do
     TestServer.stop
   end
+
+  config.treat_symbols_as_metadata_keys_with_true_values = true
+  config.run_all_when_everything_filtered = true
+  config.filter_run :focus
+  config.order = 'random'
+  config.color = true
 end

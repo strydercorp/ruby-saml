@@ -1,9 +1,9 @@
 module Onelogin::Saml
   class LogoutResponse
-    
     attr_reader :settings, :document, :xml, :response
     attr_reader :status_code, :status_message, :issuer
     attr_reader :in_response_to, :destination, :request_id
+
     def initialize(response, settings=nil)
       @response = response
 
@@ -27,10 +27,6 @@ module Onelogin::Saml
       return unless @response
     end
 
-    def logger=(val)
-      @logger = val
-    end
-    
     def success_status?
       @status_code == Onelogin::Saml::StatusCodes::SUCCESS_URI
     end
