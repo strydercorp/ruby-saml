@@ -152,6 +152,10 @@ describe Onelogin::Saml::Response do
   end
 
   describe "forward_urls" do
+    let(:name_qualifier) { 'foo' }
+    let(:name_id) { 'bar'}
+    let(:session_index) { 'baz' }
+
     it "should should append the saml request to a url" do
       settings = Onelogin::Saml::Settings.new(
         :xmlsec_certificate => fixture_path("test1-cert.pem"),
@@ -160,14 +164,13 @@ describe Onelogin::Saml::Response do
         :idp_slo_target_url => "http://example.com/logout.php"
       )
 
-      forward_url = Onelogin::Saml::AuthRequest::create(settings)
+      request = Onelogin::Saml::AuthRequest::generate(settings)
       prefix = "http://example.com/login.php?SAMLRequest="
-      forward_url[0...prefix.size].should eql(prefix)
+      expect(request.forward_url[0...prefix.size]).to eql(prefix)
 
-      session = { :name_qualifier => 'foo', :name_id => 'bar', :session_index => 'baz' }
-      forward_url = Onelogin::Saml::LogoutRequest::create(settings, session)
+      request = Onelogin::Saml::LogoutRequest::generate(name_qualifier, name_id, session_index, settings)
       prefix = "http://example.com/logout.php?SAMLRequest="
-      forward_url[0...prefix.size].should eql(prefix)
+      expect(request.forward_url[0...prefix.size]).to eql(prefix)
     end
 
     it "should append the saml request to a url with query parameters" do
@@ -178,14 +181,13 @@ describe Onelogin::Saml::Response do
         :idp_slo_target_url => "http://example.com/logout.php?param=foo"
       )
 
-      forward_url = Onelogin::Saml::AuthRequest::create(settings)
+      request = Onelogin::Saml::AuthRequest::generate(settings)
       prefix = "http://example.com/login.php?param=foo&SAMLRequest="
-      forward_url[0...prefix.size].should eql(prefix)
+      expect(request.forward_url[0...prefix.size]).to eql(prefix)
 
-      session = { :name_qualifier => 'foo', :name_id => 'bar', :session_index => 'baz' }
-      forward_url = Onelogin::Saml::LogoutRequest::create(settings, session)
+      request = Onelogin::Saml::LogoutRequest::generate(name_qualifier, name_id, session_index, settings)
       prefix = "http://example.com/logout.php?param=foo&SAMLRequest="
-      forward_url[0...prefix.size].should eql(prefix)
+      expect(request.forward_url[0...prefix.size]).to eql(prefix)
     end
   end
 end

@@ -7,6 +7,7 @@ module Onelogin::Saml
     attr_reader :status_code, :status_message
     attr_reader :in_response_to, :destination, :issuer
     attr_reader :validation_error
+
     def initialize(response, settings=nil)
       @response = response
 
@@ -28,6 +29,7 @@ module Onelogin::Saml
 
     def process(settings)
       @settings = settings
+      @logger = settings.logger
       return unless @response
 
       @in_response_to = untrusted_find_first("/samlp:Response")['InResponseTo'] rescue nil
@@ -70,10 +72,6 @@ module Onelogin::Saml
       trusted_roots.map do |trusted_root|
         trusted_root.find("descendant-or-self::#{xpath}", Onelogin::NAMESPACES).to_a
       end.flatten.compact
-    end
-
-    def logger=(val)
-      @logger = val
     end
 
     def is_valid?

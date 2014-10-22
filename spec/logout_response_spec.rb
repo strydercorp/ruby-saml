@@ -3,20 +3,74 @@ require 'rexml/document'
 require 'cgi'
 
 describe Onelogin::Saml::LogoutResponse do
-  it "should use namespaces correctly to look up attributes" do
-    @xml = Zlib::Deflate.deflate(File.read(fixture_path("test_logout_response.xml")), 9)[2..-5]
+  let(:id) { Onelogin::Saml::LogoutResponse.generate_unique_id(42) }
+  let(:issue_instant) { Onelogin::Saml::LogoutResponse.get_timestamp }
+  let(:in_response_to) { Onelogin::Saml::LogoutResponse.generate_unique_id(42) }
+  let(:idp_slo_target_url) { 'http://idp.example.com/saml2' }
+  let(:issuer) { 'http://idp.example.com/saml2' }
+  let(:session) { {} }
 
-    @xmlb64 = Base64.encode64(@xml)
-    @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'def18dbed547cdf3d52b627f41637c443045fe33')
-    @response = Onelogin::Saml::LogoutResponse.new(@xmlb64)
-    @response.process(@settings)
-
-    @response.request_id.should == '_cbb63e9741259e3f1c98a1ae38ac5ac25889720b32'
-    @response.issuer.should == 'http://saml.example.com:8080/opensso'
-    @response.in_response_to.should == "_72424ea37e28763e351189529639b9c2b150ff37e5"
-    @response.destination.should == "http://saml.example.com:8080/opensso/SingleLogoutService"
-    @response.status_code.should == Onelogin::Saml::StatusCodes::SUCCESS_URI
-    @response.status_message.should == "Successfully logged out from service"
+  let(:settings) do
+    Onelogin::Saml::Settings.new(
+      idp_slo_target_url: idp_slo_target_url,
+      issuer: issuer
+    )
   end
 
+  let(:xml) do
+    allow(Onelogin::Saml::LogoutResponse).to receive(:generate_unique_id).and_return(id)
+    allow(Onelogin::Saml::LogoutResponse).to receive(:get_timestamp).and_return(issue_instant)
+
+    Onelogin::Saml::LogoutResponse::generate(in_response_to, settings).document
+  end
+
+  it "includes destination in the saml:LogoutRequest attributes" do
+    value = xml.find_first('/samlp:LogoutResponse', Onelogin::NAMESPACES).attributes['Destination']
+    expect(value).to eq "http://idp.example.com/saml2"
+  end
+
+  it "includes id in the saml:LogoutRequest attributes" do
+    value = xml.find_first('/samlp:LogoutResponse', Onelogin::NAMESPACES).attributes['ID']
+    expect(value).to eq id
+  end
+
+  it "includes issue_instant in the saml:LogoutRequest attributes" do
+    value = xml.find_first('/samlp:LogoutResponse', Onelogin::NAMESPACES).attributes['IssueInstant']
+    expect(value).to eq issue_instant
+  end
+
+  it "includes in_response_to in the saml:LogoutRequest attributes" do
+    value = xml.find_first('/samlp:LogoutResponse', Onelogin::NAMESPACES).attributes['InResponseTo']
+    expect(value).to eq in_response_to
+  end
+
+  it "includes issuer tag" do
+    value = xml.find_first("/samlp:LogoutResponse/saml:Issuer", Onelogin::NAMESPACES).content
+    expect(value).to eq issuer
+  end
+
+  it "includes status code tag" do
+    value = xml.find_first("/samlp:LogoutResponse/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES).attributes['Value']
+    expect(value).to eq Onelogin::Saml::StatusCodes::SUCCESS_URI
+  end
+
+  it "includes status message tag" do
+    value = xml.find_first("/samlp:LogoutResponse/samlp:Status/samlp:StatusMessage", Onelogin::NAMESPACES).content
+    expect(value).to eq Onelogin::Saml::LogoutResponse::STATUS_MESSAGE
+  end
+
+  it "should use namespaces correctly to look up attributes" do
+    xml = Zlib::Deflate.deflate(File.read(fixture_path("logout_response.xml")), 9)[2..-5]
+
+    xmlb64 = Base64.encode64(xml)
+    settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'def18dbed547cdf3d52b627f41637c443045fe33')
+    response = Onelogin::Saml::LogoutResponse::parse(xmlb64, settings)
+
+    expect(response.id).to eq '_cbb63e9741259e3f1c98a1ae38ac5ac25889720b32'
+    expect(response.issuer).to eq 'http://saml.example.com:8080/opensso'
+    expect(response.in_response_to).to eq "_72424ea37e28763e351189529639b9c2b150ff37e5"
+    expect(response.destination).to eq "http://saml.example.com:8080/opensso/SingleLogoutService"
+    expect(response.status_code).to eq Onelogin::Saml::StatusCodes::SUCCESS_URI
+    expect(response.status_message).to eq "Successfully logged out from service"
+  end
 end
