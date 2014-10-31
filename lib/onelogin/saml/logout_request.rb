@@ -1,53 +1,44 @@
 module Onelogin::Saml
-  class LogoutRequest
-    attr_reader :settings, :id, :request_xml, :forward_url
+  class LogoutRequest < BaseAssertion
+    attr_writer :name_id,
+                :session_index,
+                :name_qualifier,
+                :name_identifier_format
 
-    def initialize(settings, session)
-      @settings = settings
-      @session = session
+    def name_id
+      @name_id ||= node_content('saml:NameID')
     end
 
-    def self.create(settings, session)
-      new(settings, session).generate_request
+    def name_identifier_format
+      @name_identifier_format ||= node_attribute_value('samlp:NameID', 'Format')
     end
 
-    def generate_request
-      @id = Onelogin::Saml::AuthRequest.generate_unique_id(42)
-      issue_instant = Onelogin::Saml::AuthRequest.get_timestamp
-
-      @request_xml = <<-REQUEST_XML
-<samlp:LogoutRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" ID="#{@id}" Version="2.0" IssueInstant="#{issue_instant}" Destination="#{@settings.idp_slo_target_url}">
-  <saml:Issuer xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">#{@settings.issuer}</saml:Issuer>
-  <saml:NameID xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" NameQualifier="#{@session[:name_qualifier]}" SPNameQualifier="#{@settings.issuer}" Format="#{@settings.name_identifier_format}">#{@session[:name_id]}</saml:NameID>
-  <samlp:SessionIndex xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol">#{@session[:session_index]}</samlp:SessionIndex>
-</samlp:LogoutRequest>
-      REQUEST_XML
-
-      deflated_logout_request = Zlib::Deflate.deflate(@request_xml, 9)[2..-5]
-      base64_logout_request = Base64.strict_encode64(deflated_logout_request)
-
-      url, existing_query_string = @settings.idp_slo_target_url.split('?')
-      query_string = _query_string_append(existing_query_string, 'SAMLRequest', base64_logout_request)
-
-      if settings.sign?
-        query_string = _query_string_append(query_string, "SigAlg", "http://www.w3.org/2000/09/xmldsig#rsa-sha1")
-        signature =  _generate_signature(query_string, @settings.xmlsec_privatekey)
-        query_string = _query_string_append(query_string, "Signature", signature)
-      end
-
-      @forward_url = [url, query_string].join("?")
-
-      @forward_url
+    def name_qualifier
+      @name_qualifier ||= node_attribute_value('samlp:NameID', 'NameQualifier')
     end
 
-    def _generate_signature(string, private_key)
-      pkey = OpenSSL::PKey::RSA.new(File.read(private_key))
-      sign = pkey.sign(OpenSSL::Digest::SHA1.new, string)
-      Base64.encode64(sign).gsub(/\s/, '')
+    def session_index
+      @session_index ||= node_content('samlp:SessionIndex')
     end
 
-    def _query_string_append(query_string, key, value)
-      [query_string, "#{CGI.escape(key)}=#{CGI.escape(value)}"].compact.join('&')
+    def self.generate(name_qualifier, name_id, session_index, settings)
+      super(settings, {
+        destination: settings.idp_slo_target_url,
+        name_identifier_format: settings.name_identifier_format,
+        name_id: name_id,
+        name_qualifier: name_qualifier,
+        session_index: session_index
+      })
+    end
+
+    def generate
+      <<-XML
+        <samlp:LogoutRequest xmlns:samlp="#{Onelogin::NAMESPACES['samlp']}" xmlns:saml="#{Onelogin::NAMESPACES['saml']}" ID="#{self.id}" Version="2.0" IssueInstant="#{self.issue_instant}" Destination="#{self.destination}">
+          <saml:Issuer>#{self.issuer}</saml:Issuer>
+          <saml:NameID NameQualifier="#{self.name_qualifier}" SPNameQualifier="#{self.issuer}" Format="#{self.name_identifier_format}">#{self.name_id}</saml:NameID>
+          <samlp:SessionIndex>#{self.session_index}</samlp:SessionIndex>
+        </samlp:LogoutRequest>
+      XML
     end
   end
 end

@@ -1,0 +1,11 @@
+<samlp:LogoutRequest
+  xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
+  xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
+  Version="2.0"
+  ID="_cbb63e9741259e3f1c98a1ae38ac5ac25889720b32"
+  Destination="http://saml.example.com:8080/opensso/SingleLogoutService"
+  IssueInstant="2008-06-03T12:59:57Z">
+  <saml:Issuer>http://saml.example.com:8080/opensso</saml:Issuer>
+  <saml:NameID>_6a171f538d4f733ae95eca74ce264cfb602808c850</saml:NameID>
+  <samlp:SessionIndex>_b976de57fcf0f707de297069f33a6b0248827d96a9</samlp:SessionIndex>
+</samlp:LogoutRequest>

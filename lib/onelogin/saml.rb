@@ -35,13 +35,13 @@ module Onelogin
   }
 end
 
+require 'onelogin/saml/base_assertion'
 require 'onelogin/saml/auth_request'
-require 'onelogin/saml/authn_contexts.rb'
+require 'onelogin/saml/authn_contexts'
 require 'onelogin/saml/response'
 require 'onelogin/saml/settings'
 require 'onelogin/saml/name_identifiers'
 require 'onelogin/saml/status_codes'
 require 'onelogin/saml/meta_data'
 require 'onelogin/saml/logout_request'
-require 'onelogin/saml/log_out_request'
 require 'onelogin/saml/logout_response'

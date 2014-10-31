@@ -1,34 +1,37 @@
 module Onelogin::Saml
-  class LogoutResponse
-    attr_reader :settings, :document, :xml, :response
-    attr_reader :status_code, :status_message, :issuer
-    attr_reader :in_response_to, :destination, :request_id
+  class LogoutResponse < BaseAssertion
 
-    def initialize(response, settings=nil)
-      @response = response
+    STATUS_MESSAGE = 'Successfully Signed Out'
 
-      @xml = Base64.decode64(@response)
-      zlib = Zlib::Inflate.new(-Zlib::MAX_WBITS)
-      @xml = zlib.inflate(@xml)
-      @document = LibXML::XML::Document.string(@xml)
+    attr_writer :status_code,
+                :status_message
 
-      @request_id = @document.find_first("/samlp:LogoutResponse", Onelogin::NAMESPACES)['ID'] rescue nil
-      @issuer = @document.find_first("/samlp:LogoutResponse/saml:Issuer", Onelogin::NAMESPACES).content rescue nil
-      @in_response_to = @document.find_first("/samlp:LogoutResponse", Onelogin::NAMESPACES)['InResponseTo'] rescue nil
-      @destination = @document.find_first("/samlp:LogoutResponse", Onelogin::NAMESPACES)['Destination'] rescue nil
-      @status_code = @document.find_first("/samlp:LogoutResponse/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES)['Value'] rescue nil
-      @status_message = @document.find_first("/samlp:LogoutResponse/samlp:Status/samlp:StatusMessage", Onelogin::NAMESPACES).content rescue nil
-
-      process(settings) if settings
+    def status_code
+      @status_code ||= node_attribute_value('samlp:Status/samlp:StatusCode', 'Value')
     end
 
-    def process(settings)
-      @settings = settings
-      return unless @response
+    def status_message
+      @status_message ||= node_content("samlp:Status/samlp:StatusMessage")
+    end
+
+    def self.generate(in_response_to, settings)
+      super(settings, in_response_to: in_response_to, destination: settings.idp_slo_target_url)
+    end
+
+    def generate
+      <<-XML
+        <samlp:LogoutResponse xmlns:samlp="#{Onelogin::NAMESPACES['samlp']}" xmlns:saml="#{Onelogin::NAMESPACES['saml']}" ID="#{self.id}" Version="2.0" IssueInstant="#{self.issue_instant}" Destination="#{self.destination}" InResponseTo="#{self.in_response_to}">
+          <saml:Issuer>#{self.issuer}</saml:Issuer>
+          <samlp:Status>
+            <samlp:StatusCode Value="#{Onelogin::Saml::StatusCodes::SUCCESS_URI}"></samlp:StatusCode>
+            <samlp:StatusMessage>#{STATUS_MESSAGE}</samlp:StatusMessage>
+          </samlp:Status>
+        </samlp:LogoutResponse>
+      XML
     end
 
     def success_status?
-      @status_code == Onelogin::Saml::StatusCodes::SUCCESS_URI
+      self.status_code == Onelogin::Saml::StatusCodes::SUCCESS_URI
     end
   end
 end
