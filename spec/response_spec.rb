@@ -164,9 +164,9 @@ describe Onelogin::Saml::Response do
         :idp_slo_target_url => "http://example.com/logout.php"
       )
 
-      request = Onelogin::Saml::AuthRequest::generate(settings)
+      forward_url = Onelogin::Saml::AuthRequest::create(settings)
       prefix = "http://example.com/login.php?SAMLRequest="
-      expect(request.forward_url[0...prefix.size]).to eql(prefix)
+      expect(forward_url[0...prefix.size]).to eql(prefix)
 
       request = Onelogin::Saml::LogoutRequest::generate(name_qualifier, name_id, session_index, settings)
       prefix = "http://example.com/logout.php?SAMLRequest="
@@ -181,9 +181,9 @@ describe Onelogin::Saml::Response do
         :idp_slo_target_url => "http://example.com/logout.php?param=foo"
       )
 
-      request = Onelogin::Saml::AuthRequest::generate(settings)
+      forward_url = Onelogin::Saml::AuthRequest::create(settings)
       prefix = "http://example.com/login.php?param=foo&SAMLRequest="
-      expect(request.forward_url[0...prefix.size]).to eql(prefix)
+      expect(forward_url[0...prefix.size]).to eql(prefix)
 
       request = Onelogin::Saml::LogoutRequest::generate(name_qualifier, name_id, session_index, settings)
       prefix = "http://example.com/logout.php?param=foo&SAMLRequest="
