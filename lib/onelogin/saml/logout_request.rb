@@ -33,7 +33,7 @@ module Onelogin::Saml
 
     def generate
       <<-XML
-        <samlp:LogoutRequest xmlns:samlp="#{Onelogin::NAMESPACES['samlp']}" xmlns:saml="#{Onelogin::NAMESPACES['saml']}" ID="#{self.id}" Version="2.0" IssueInstant="#{self.issue_instant}" Destination="#{self.destination}">
+        <samlp:LogoutRequest xmlns:samlp="#{Onelogin::NAMESPACES['samlp']}" xmlns:saml="#{Onelogin::NAMESPACES['saml']}" ID="#{self.id}" Version="2.0" IssueInstant="#{self.issue_instant}" Destination="#{CGI.escapeHTML(self.destination)}">
           <saml:Issuer>#{self.issuer}</saml:Issuer>
           <saml:NameID NameQualifier="#{self.name_qualifier}" SPNameQualifier="#{self.issuer}" Format="#{self.name_identifier_format}">#{self.name_id}</saml:NameID>
           <samlp:SessionIndex>#{self.session_index}</samlp:SessionIndex>

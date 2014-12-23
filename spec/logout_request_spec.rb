@@ -65,12 +65,12 @@ describe Onelogin::Saml::LogoutRequest do
     settings = Onelogin::Saml::Settings.new(
       :xmlsec_certificate => fixture_path("test1-cert.pem"),
       :xmlsec_privatekey => fixture_path("test1-key.pem"),
-      :idp_slo_target_url => "http://idp.example.com/saml2?existing=param",
+      :idp_slo_target_url => "http://idp.example.com/saml2?existing=param&existing=param",
       :idp_cert_fingerprint => 'def18dbed547cdf3d52b627f41637c443045fe33',
       :name_identifier_format => Onelogin::Saml::NameIdentifiers::UNSPECIFIED
     )
     request = Onelogin::Saml::LogoutRequest.generate(name_qualifier, name_id, session_index, settings)
-    expect(request.forward_url).to match(%r{^http://idp.example.com/saml2\?existing=param&})
+    expect(request.forward_url).to match(%r{^http://idp.example.com/saml2\?existing=param\&existing=param&})
     expect(verify_query_string_signature(settings, request.forward_url)).to be_true
   end
 
