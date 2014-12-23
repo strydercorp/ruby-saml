@@ -20,8 +20,8 @@ module Onelogin::Saml
 
     def generate
       <<-XML
-        <samlp:LogoutResponse xmlns:samlp="#{Onelogin::NAMESPACES['samlp']}" xmlns:saml="#{Onelogin::NAMESPACES['saml']}" ID="#{self.id}" Version="2.0" IssueInstant="#{self.issue_instant}" Destination="#{self.destination}" InResponseTo="#{self.in_response_to}">
-          <saml:Issuer>#{self.issuer}</saml:Issuer>
+        <samlp:LogoutResponse xmlns:samlp="#{Onelogin::NAMESPACES['samlp']}" xmlns:saml="#{Onelogin::NAMESPACES['saml']}" ID="#{self.id}" Version="2.0" IssueInstant="#{self.issue_instant}" Destination="#{CGI.escapeHTML(self.destination)}" InResponseTo="#{self.in_response_to}">
+          <saml:Issuer>#{CGI.escapeHTML(self.issuer)}</saml:Issuer>
           <samlp:Status>
             <samlp:StatusCode Value="#{Onelogin::Saml::StatusCodes::SUCCESS_URI}"></samlp:StatusCode>
             <samlp:StatusMessage>#{STATUS_MESSAGE}</samlp:StatusMessage>

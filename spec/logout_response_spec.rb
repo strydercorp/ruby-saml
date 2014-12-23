@@ -6,8 +6,8 @@ describe Onelogin::Saml::LogoutResponse do
   let(:id) { Onelogin::Saml::LogoutResponse.generate_unique_id(42) }
   let(:issue_instant) { Onelogin::Saml::LogoutResponse.get_timestamp }
   let(:in_response_to) { Onelogin::Saml::LogoutResponse.generate_unique_id(42) }
-  let(:idp_slo_target_url) { 'http://idp.example.com/saml2' }
-  let(:issuer) { 'http://idp.example.com/saml2' }
+  let(:idp_slo_target_url) { 'http://idp.example.com/saml2?existing=param&existing=param' }
+  let(:issuer) { 'http://idp.example.com/saml2?existing=param&existing=param' }
   let(:session) { {} }
 
   let(:settings) do
@@ -26,7 +26,7 @@ describe Onelogin::Saml::LogoutResponse do
 
   it "includes destination in the saml:LogoutRequest attributes" do
     value = xml.find_first('/samlp:LogoutResponse', Onelogin::NAMESPACES).attributes['Destination']
-    expect(value).to eq "http://idp.example.com/saml2"
+    expect(value).to eq "http://idp.example.com/saml2?existing=param&existing=param"
   end
 
   it "includes id in the saml:LogoutRequest attributes" do
