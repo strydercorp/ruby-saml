@@ -365,7 +365,13 @@ module XMLSecurity
 
       # create a copy of the document with the certificate removed
       doc = LibXML::XML::Document.new
-      doc.encoding = self.encoding == XML::Encoding::NONE ? XML::Encoding::ISO_8859_1 : self.encoding
+      # doc.encoding = self.encoding == XML::Encoding::NONE ? XML::Encoding::ISO_8859_1 : self.encoding
+
+      # for some reason xmlsec doesn't like it when its UTF-8 and has other
+      # characters with umlauts and the like.  We will just force it to another encoding.
+      # This should work fine since we are just validating the signature.
+      doc.encoding = XML::Encoding::ISO_8859_1
+
       doc.root = doc.import(self.root)
       sigcert = doc.find_first("//ds:Signature/ds:KeyInfo", Onelogin::NAMESPACES)
       sigcert.remove!
