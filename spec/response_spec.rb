@@ -116,6 +116,15 @@ describe Onelogin::Saml::Response do
     @response.should_not be_is_valid
   end
 
+  it "should protect against additional mis-signed assertions" do
+    @xmlb64 = Base64.encode64(File.read(fixture_path('xml_missigned_assertion.xml')))
+    @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'c38e789fcfbbd4727bd8ff7fc365b44fc3596bda')
+    @response = Onelogin::Saml::Response.new(@xmlb64)
+    @response.process(@settings)
+    @response.should be_is_valid
+    @response.saml_attributes['eduPersonPrincipalName'].should == 'cody'
+  end
+
   it "should allow non-ascii characters in attributes" do
     @xmlb64 = Base64.encode64(File.read(fixture_path("test6-response.xml")))
     @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'afe71c28ef740bc87425be13a2263d37971da1f9')

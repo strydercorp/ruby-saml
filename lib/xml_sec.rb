@@ -344,7 +344,8 @@ module XMLSecurity
     end
 
     def signatures
-      @signatures ||= self.find("//ds:Signature", Onelogin::NAMESPACES)
+      # we only return the first, cause our signature validation only checks the first
+      @signatures ||= [self.find_first("//ds:Signature", Onelogin::NAMESPACES)]
     end
 
     def validate(idp_cert_fingerprint, logger = nil)
