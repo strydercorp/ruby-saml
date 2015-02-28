@@ -330,7 +330,7 @@ module XMLSecurity
 
     def signed_roots
       signatures.map do |sig|
-        ref = sig.find('.//ds:Reference', Onelogin::NAMESPACES).first
+        ref = sig.find('./ds:SignedInfo/ds:Reference', Onelogin::NAMESPACES).first
         signed_element_id = ref['URI'].sub(/^#/, '')
 
         if signed_element_id.empty?
