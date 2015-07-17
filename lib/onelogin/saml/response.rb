@@ -22,6 +22,7 @@ module Onelogin::Saml
       end
 
       @issuer = document.find_first("/samlp:Response/saml:Issuer", Onelogin::NAMESPACES).content rescue nil
+      @issuer ||= document.find_first("/samlp:Response/saml:Assertion/saml:Issuer", Onelogin::NAMESPACES).content rescue nil
       @status_code = document.find_first("/samlp:Response/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES)["Value"] rescue nil
 
       process(settings) if settings
