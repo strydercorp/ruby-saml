@@ -13,7 +13,7 @@ module Onelogin::Saml
 
       begin
         @xml = Base64.decode64(@response)
-        @document = LibXML::XML::Document.string(@xml)
+        @document = Nokogiri::XML(@xml)
         @document.extend(XMLSecurity::SignedDocument)
       rescue
         # could not parse document, everything is invalid
@@ -21,9 +21,9 @@ module Onelogin::Saml
         return
       end
 
-      @issuer = document.find_first("/samlp:Response/saml:Issuer", Onelogin::NAMESPACES).content.strip rescue nil
-      @issuer ||= document.find_first("/samlp:Response/saml:Assertion/saml:Issuer", Onelogin::NAMESPACES).content.strip rescue nil
-      @status_code = document.find_first("/samlp:Response/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES)["Value"] rescue nil
+      @issuer = document.at_xpath("/samlp:Response/saml:Issuer", Onelogin::NAMESPACES).content.strip rescue nil
+      @issuer ||= document.at_xpath("/samlp:Response/saml:Assertion/saml:Issuer", Onelogin::NAMESPACES).content.strip rescue nil
+      @status_code = document.at_xpath("/samlp:Response/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES)["Value"] rescue nil
 
       process(settings) if settings
     end
@@ -55,14 +55,15 @@ module Onelogin::Saml
     end
 
     def decrypted_document
-      @decrypted_document ||= LibXML::XML::Document.document(document).tap do |doc|
-        doc.extend(XMLSecurity::SignedDocument)
-        doc.decrypt!(settings)
+      unless @decrypted_document
+        document.decrypt!(settings)
+        @decrypted_document = document
       end
+      @decrypted_document
     end
 
     def untrusted_find_first(xpath)
-      decrypted_document.find(xpath, Onelogin::NAMESPACES).first
+      decrypted_document.at_xpath(xpath, Onelogin::NAMESPACES)
     end
 
     def trusted_find_first(xpath)
@@ -71,7 +72,7 @@ module Onelogin::Saml
 
     def trusted_find(xpath)
       trusted_roots.map do |trusted_root|
-        trusted_root.find("descendant-or-self::#{xpath}", Onelogin::NAMESPACES).to_a
+        trusted_root.xpath("descendant-or-self::#{xpath}", Onelogin::NAMESPACES).to_a
       end.flatten.compact
     end
 
@@ -141,7 +142,7 @@ module Onelogin::Saml
     end
 
     def fingerprint_from_idp
-      if base64_cert = decrypted_document.find_first("//ds:X509Certificate", Onelogin::NAMESPACES)
+      if base64_cert = decrypted_document.at_xpath("//ds:X509Certificate", Onelogin::NAMESPACES)
         cert_text = Base64.decode64(base64_cert.content)
         cert = OpenSSL::X509::Certificate.new(cert_text)
         Digest::SHA1.hexdigest(cert.to_der)

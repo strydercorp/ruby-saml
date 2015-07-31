@@ -1,6 +1,6 @@
 require 'zlib'
 require "base64"
-require "xml/libxml"
+require "nokogiri"
 require "xml_sec"
 require "cgi"
 

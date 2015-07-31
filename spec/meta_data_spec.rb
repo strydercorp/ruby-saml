@@ -32,7 +32,7 @@ describe Onelogin::Saml::MetaData do
     )
     doc = REXML::Document.new Onelogin::Saml::MetaData.create(settings)
     key_descriptors = REXML::XPath.match(doc, "//KeyDescriptor")
-    key_descriptors.should have(2).keys
+    key_descriptors.length.should == 2
     key_descriptors[0].attributes["use"].should == "encryption"
     key_descriptors[1].attributes["use"].should == "signing"
   end

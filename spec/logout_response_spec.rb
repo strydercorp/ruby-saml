@@ -25,37 +25,37 @@ describe Onelogin::Saml::LogoutResponse do
   end
 
   it "includes destination in the saml:LogoutRequest attributes" do
-    value = xml.find_first('/samlp:LogoutResponse', Onelogin::NAMESPACES).attributes['Destination']
+    value = xml.at_xpath('/samlp:LogoutResponse', Onelogin::NAMESPACES)['Destination']
     expect(value).to eq "http://idp.example.com/saml2?existing=param&existing=param"
   end
 
   it "includes id in the saml:LogoutRequest attributes" do
-    value = xml.find_first('/samlp:LogoutResponse', Onelogin::NAMESPACES).attributes['ID']
+    value = xml.at_xpath('/samlp:LogoutResponse', Onelogin::NAMESPACES)['ID']
     expect(value).to eq id
   end
 
   it "includes issue_instant in the saml:LogoutRequest attributes" do
-    value = xml.find_first('/samlp:LogoutResponse', Onelogin::NAMESPACES).attributes['IssueInstant']
+    value = xml.at_xpath('/samlp:LogoutResponse', Onelogin::NAMESPACES)['IssueInstant']
     expect(value).to eq issue_instant
   end
 
   it "includes in_response_to in the saml:LogoutRequest attributes" do
-    value = xml.find_first('/samlp:LogoutResponse', Onelogin::NAMESPACES).attributes['InResponseTo']
+    value = xml.at_xpath('/samlp:LogoutResponse', Onelogin::NAMESPACES)['InResponseTo']
     expect(value).to eq in_response_to
   end
 
   it "includes issuer tag" do
-    value = xml.find_first("/samlp:LogoutResponse/saml:Issuer", Onelogin::NAMESPACES).content
+    value = xml.at_xpath("/samlp:LogoutResponse/saml:Issuer", Onelogin::NAMESPACES).content
     expect(value).to eq issuer
   end
 
   it "includes status code tag" do
-    value = xml.find_first("/samlp:LogoutResponse/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES).attributes['Value']
+    value = xml.at_xpath("/samlp:LogoutResponse/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES)['Value']
     expect(value).to eq Onelogin::Saml::StatusCodes::SUCCESS_URI
   end
 
   it "includes status message tag" do
-    value = xml.find_first("/samlp:LogoutResponse/samlp:Status/samlp:StatusMessage", Onelogin::NAMESPACES).content
+    value = xml.at_xpath("/samlp:LogoutResponse/samlp:Status/samlp:StatusMessage", Onelogin::NAMESPACES).content
     expect(value).to eq Onelogin::Saml::LogoutResponse::STATUS_MESSAGE
   end
 

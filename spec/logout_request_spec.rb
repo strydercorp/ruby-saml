@@ -43,18 +43,18 @@ describe Onelogin::Saml::LogoutRequest do
   let(:forward_url) { logout_request.forward_url }
 
   it "includes destination in the saml:LogoutRequest attributes" do
-    logout_xml = LibXML::XML::Document.string(logout_request.xml)
-    logout_xml.find_first('/samlp:LogoutRequest', Onelogin::NAMESPACES).attributes['Destination'].should ==  "http://idp.example.com/saml2"
+    logout_xml = Nokogiri::XML(logout_request.xml)
+    logout_xml.at_xpath('/samlp:LogoutRequest', Onelogin::NAMESPACES)['Destination'].should ==  "http://idp.example.com/saml2"
   end
 
   it "properly sets the Format attribute NameID based on settings" do
-    logout_xml = LibXML::XML::Document.string(logout_request.xml)
-    logout_xml.find_first('/samlp:LogoutRequest/saml:NameID', Onelogin::NAMESPACES).attributes['Format'].should == Onelogin::Saml::NameIdentifiers::UNSPECIFIED
+    logout_xml = Nokogiri::XML(logout_request.xml)
+    logout_xml.at_xpath('/samlp:LogoutRequest/saml:NameID', Onelogin::NAMESPACES)['Format'].should == Onelogin::Saml::NameIdentifiers::UNSPECIFIED
   end
 
   it "does not include the signature in the request xml" do
-    logout_xml = LibXML::XML::Document.string(logout_request.xml)
-    logout_xml.find_first('/samlp:LogoutRequest/ds:Signature', Onelogin::NAMESPACES).should be_nil
+    logout_xml = Nokogiri::XML(logout_request.xml)
+    logout_xml.at_xpath('/samlp:LogoutRequest/ds:Signature', Onelogin::NAMESPACES).should be_nil
   end
 
   it "can sign the generated query string" do

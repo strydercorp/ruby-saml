@@ -25,7 +25,7 @@
 require 'rubygems'
 require 'ffi'
 require 'base64'
-require "xml/libxml"
+require "nokogiri"
 require "openssl"
 require "digest/sha1"
 
@@ -330,7 +330,7 @@ module XMLSecurity
 
     def signed_roots
       signatures.map do |sig|
-        ref = sig.find('./ds:SignedInfo/ds:Reference', Onelogin::NAMESPACES).first
+        ref = sig.at_xpath('./ds:SignedInfo/ds:Reference', Onelogin::NAMESPACES)
         signed_element_id = ref['URI'].sub(/^#/, '')
 
         if signed_element_id.empty?
@@ -338,19 +338,19 @@ module XMLSecurity
         else
           xpath_id_query = %Q(ancestor::*[@ID = "#{signed_element_id}"])
 
-          ref.find(xpath_id_query, Onelogin::NAMESPACES).first
+          ref.at_xpath(xpath_id_query, Onelogin::NAMESPACES)
         end
       end.compact
     end
 
     def signatures
       # we only return the first, cause our signature validation only checks the first
-      @signatures ||= [self.find_first("//ds:Signature", Onelogin::NAMESPACES)]
+      @signatures ||= [self.at_xpath("//ds:Signature", Onelogin::NAMESPACES)].compact
     end
 
     def validate(idp_cert_fingerprint, logger = nil)
       # get cert from response
-      base64_cert = self.find_first("//ds:X509Certificate", Onelogin::NAMESPACES).content
+      base64_cert = self.at_xpath("//ds:X509Certificate", Onelogin::NAMESPACES).content
       cert_text = Base64.decode64(base64_cert)
       cert = OpenSSL::X509::Certificate.new(cert_text)
 
@@ -364,21 +364,8 @@ module XMLSecurity
         end
       end
 
-      # create a copy of the document with the certificate removed
-      doc = LibXML::XML::Document.new
-      # doc.encoding = self.encoding == XML::Encoding::NONE ? XML::Encoding::ISO_8859_1 : self.encoding
-
-      # for some reason xmlsec doesn't like it when its UTF-8 and has other
-      # characters with umlauts and the like.  We will just force it to another encoding.
-      # This should work fine since we are just validating the signature.
-      doc.encoding = XML::Encoding::ISO_8859_1
-
-      doc.root = doc.import(self.root)
-      sigcert = doc.find_first("//ds:Signature/ds:KeyInfo", Onelogin::NAMESPACES)
-      sigcert.remove!
-
       # Force encoding of the xml and the xml string for validation
-      xml = doc.to_s(:indent => false, :encoding => doc.encoding).encode(doc.rb_encoding)
+      xml = to_xml(save_with: Nokogiri::XML::Node::SaveOptions::AS_XML, encoding: "ISO-8859-1")
 
       # validate it!
       validate_doc(xml, SignedDocument.format_cert(cert))
@@ -432,14 +419,13 @@ module XMLSecurity
     # replaces EncryptedData nodes with decrypted copies
     def decrypt!(settings)
       if settings.encryption_configured?
-        find("//xenc:EncryptedData", Onelogin::NAMESPACES).each do |node|
+        xpath("//xenc:EncryptedData", Onelogin::NAMESPACES).each do |node|
           decrypted_xml = decrypt_node(settings, node.to_s)
           if decrypted_xml
-            decrypted_doc = LibXML::XML::Document.string(decrypted_xml)
+            decrypted_doc = Nokogiri::XML(decrypted_xml)
             decrypted_node = decrypted_doc.root
-            decrypted_node = self.import(decrypted_node)
             node.parent.next = decrypted_node
-            node.parent.remove!
+            node.parent.unlink
           end
         end
       end

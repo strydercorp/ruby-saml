@@ -29,7 +29,7 @@ module Onelogin::Saml
     end
 
     def document
-      @document ||= LibXML::XML::Document.string(xml) if xml
+      @document ||= Nokogiri::XML(xml) if xml
     end
 
     def xml=(value)
@@ -117,11 +117,11 @@ module Onelogin::Saml
     end
 
     def node_attribute_value(xpath, attribute)
-      document.root.find_first(xpath, Onelogin::NAMESPACES)[attribute] rescue nil
+      document.root.at_xpath(xpath, Onelogin::NAMESPACES)[attribute] rescue nil
     end
 
     def node_content(xpath)
-      document.root.find_first(xpath, Onelogin::NAMESPACES).content rescue nil
+      document.root.at_xpath(xpath, Onelogin::NAMESPACES).content rescue nil
     end
 
     def self.generate_unique_id(length = 42)
