@@ -55,11 +55,10 @@ module Onelogin::Saml
     end
 
     def decrypted_document
-      unless @decrypted_document
-        document.decrypt!(settings)
-        @decrypted_document = document
+      @decrypted_document ||= document.clone.tap do |doc|
+        doc.extend(XMLSecurity::SignedDocument)
+        doc.decrypt!(settings)
       end
-      @decrypted_document
     end
 
     def untrusted_find_first(xpath)
