@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{ruby-saml-mod}
-  s.version = "0.2.6"
+  s.version = "0.2.7"
   s.authors = ["OneLogin LLC", "Bracken", "Zach", "Cody", "Jeremy", "Paul", "Nick"]
   s.summary = %q{Ruby library for SAML service providers}
   s.homepage = %q{http://github.com/instructure/ruby-saml}
