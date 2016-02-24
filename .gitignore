@@ -1,2 +1,6 @@
 Gemfile.lock
 pkg
+
+# RubyMine
+*.iml
+.idea/
