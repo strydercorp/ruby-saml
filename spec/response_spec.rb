@@ -46,6 +46,36 @@ describe Onelogin::Saml::Response do
       @response.status_code.should == "urn:oasis:names:tc:SAML:2.0:status:Success"
       @response.status_message.strip.should == ""
     end
+
+    it "should call back what key it used to decrypt when callback present" do
+
+      def receive_key(key)
+        @received_key = key
+      end
+
+      @settings.xmlsec_privatekey = fixture_path("wrong-key.pem")
+      @settings.xmlsec_additional_privatekeys = [fixture_path("test1-key.pem")]
+      @settings.on_key_success = method(:receive_key)
+      XMLSecurity.mute do
+        @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
+      end
+
+      expect(@received_key).to eq(fixture_path("test1-key.pem"))
+    end
+
+    it "should not call back with key when there is not correct key" do
+      def receive_key(key)
+        @received_key = key
+      end
+
+      @settings.xmlsec_privatekey = fixture_path("wrong-key.pem")
+      @settings.on_key_success = method(:receive_key)
+      XMLSecurity.mute do
+        @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
+      end
+
+      expect(@received_key).to be_nil
+    end
   end
 
   it "should not verify when XSLT transforms are being used" do

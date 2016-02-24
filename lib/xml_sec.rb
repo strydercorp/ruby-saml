@@ -435,7 +435,12 @@ module XMLSecurity
     def decrypt_node(settings, xmlstr)
       settings.all_private_keys.each do |key|
         result = xmlsec_decrypt(xmlstr, key)
-        return result if result
+        if result
+          if settings.key_success_callback?
+            settings.on_key_success.call(key)
+          end
+          return result
+        end
       end
       nil
     end
