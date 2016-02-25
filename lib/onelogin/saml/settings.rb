@@ -68,7 +68,11 @@ module Onelogin::Saml
     attr_accessor :on_key_success
 
     def all_private_keys
-      Array(xmlsec_additional_privatekeys).unshift(xmlsec_privatekey).compact
+      if xmlsec_additional_privatekeys.nil?
+        [xmlsec_privatekey]
+      else
+        Array(xmlsec_additional_privatekeys.dup).unshift(xmlsec_privatekey).compact
+      end
     end
 
     def encryption_configured?

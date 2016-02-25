@@ -47,6 +47,16 @@ describe Onelogin::Saml::Response do
       @response.status_message.strip.should == ""
     end
 
+    it "should not pollute xmlsec_additional_privatekeys with the primary" do
+      @settings.xmlsec_privatekey = fixture_path("wrong-key.pem")
+      @settings.xmlsec_additional_privatekeys = [fixture_path("test1-key.pem")]
+      XMLSecurity.mute do
+        @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
+      end
+
+      expect(@settings.xmlsec_additional_privatekeys.include? fixture_path("wrong-key.pem")).to be_false
+    end
+
     it "should call back what key it used to decrypt when callback present" do
 
       def receive_key(key)
