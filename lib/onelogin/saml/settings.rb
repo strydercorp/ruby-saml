@@ -63,6 +63,10 @@ module Onelogin::Saml
     # To be used for key rotation
     attr_accessor :xmlsec_additional_privatekeys
 
+    # Callback that passes the successful key used to authenticate.
+    # Usage: on_key_success(key)
+    attr_accessor :on_key_success
+
     def all_private_keys
       Array(xmlsec_additional_privatekeys).unshift(xmlsec_privatekey).compact
     end
@@ -73,6 +77,10 @@ module Onelogin::Saml
 
     def sign?
       !!self.xmlsec_privatekey
+    end
+
+    def key_success_callback?
+      !!self.on_key_success
     end
   end
 end
