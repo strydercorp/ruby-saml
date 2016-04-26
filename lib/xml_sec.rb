@@ -357,8 +357,8 @@ module XMLSecurity
       # check cert matches registered idp cert, unless we explicitly skip this check
       unless idp_cert_fingerprint == '*'
         fingerprint = Digest::SHA1.hexdigest(cert.to_der)
-        expected_fingerprint = idp_cert_fingerprint.gsub(":", "").downcase
-        if fingerprint != expected_fingerprint
+        expected_fingerprints = Array(idp_cert_fingerprint).map { |f| f.gsub(":", "").downcase }
+        unless expected_fingerprints.include?(fingerprint)
           @validation_error = "Invalid fingerprint (expected #{expected_fingerprint}, got #{fingerprint})"
           return false
         end

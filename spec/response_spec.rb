@@ -22,6 +22,12 @@ describe Onelogin::Saml::Response do
       @response.status_message.strip.should == ""
     end
 
+    it "support multiple valid certs" do
+      @settings.idp_cert_fingerprint = ['somethingold', 'def18dbed547cdf3d52b627f41637c443045fe33']
+      @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
+      @response.should be_is_valid
+    end
+
     it "should not be able to decrypt without the proper key" do
       @settings.xmlsec_privatekey = fixture_path("wrong-key.pem")
       XMLSecurity.mute do
