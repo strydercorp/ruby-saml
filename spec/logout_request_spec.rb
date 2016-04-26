@@ -58,7 +58,7 @@ describe Onelogin::Saml::LogoutRequest do
   end
 
   it "can sign the generated query string" do
-    expect(verify_query_string_signature(settings, forward_url)).to be_true
+    expect(verify_query_string_signature(settings, forward_url)).to eq true
   end
 
   it "properly signs when the IDP URL already contains a query string" do
@@ -71,7 +71,7 @@ describe Onelogin::Saml::LogoutRequest do
     )
     request = Onelogin::Saml::LogoutRequest.generate(name_qualifier, name_id, session_index, settings)
     expect(request.forward_url).to match(%r{^http://idp.example.com/saml2\?existing=param\&existing=param&})
-    expect(verify_query_string_signature(settings, request.forward_url)).to be_true
+    expect(verify_query_string_signature(settings, request.forward_url)).to eq true
   end
 
   it "parses a logout request" do
