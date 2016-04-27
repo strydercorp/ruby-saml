@@ -168,7 +168,9 @@ describe Onelogin::Saml::Response do
 
   describe "forward_urls" do
     let(:name_qualifier) { 'foo' }
+    let(:sp_name_qualifier) { 'foo' }
     let(:name_id) { 'bar'}
+    let(:name_identifier_format) { Onelogin::Saml::NameIdentifiers::UNSPECIFIED }
     let(:session_index) { 'baz' }
 
     it "should should append the saml request to a url" do
@@ -183,7 +185,11 @@ describe Onelogin::Saml::Response do
       prefix = "http://example.com/login.php?SAMLRequest="
       expect(forward_url[0...prefix.size]).to eql(prefix)
 
-      request = Onelogin::Saml::LogoutRequest::generate(name_qualifier, name_id, session_index, settings)
+      request = Onelogin::Saml::LogoutRequest::generate(name_qualifier,
+                                                        sp_name_qualifier,
+                                                        name_id,
+                                                        name_identifier_format,
+                                                        session_index, settings)
       prefix = "http://example.com/logout.php?SAMLRequest="
       expect(request.forward_url[0...prefix.size]).to eql(prefix)
     end
@@ -200,7 +206,12 @@ describe Onelogin::Saml::Response do
       prefix = "http://example.com/login.php?param=foo&SAMLRequest="
       expect(forward_url[0...prefix.size]).to eql(prefix)
 
-      request = Onelogin::Saml::LogoutRequest::generate(name_qualifier, name_id, session_index, settings)
+      request = Onelogin::Saml::LogoutRequest::generate(name_qualifier,
+                                                        sp_name_qualifier,
+                                                        name_id,
+                                                        name_identifier_format,
+                                                        session_index,
+                                                        settings)
       prefix = "http://example.com/logout.php?param=foo&SAMLRequest="
       expect(request.forward_url[0...prefix.size]).to eql(prefix)
     end
