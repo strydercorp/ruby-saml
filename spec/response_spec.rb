@@ -28,6 +28,13 @@ describe Onelogin::Saml::Response do
       @response.should be_is_valid
     end
 
+    it "gives a decent error for a fingerprint problem" do
+      @settings.idp_cert_fingerprint = ['somethingold']
+      @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
+      @response.should_not be_is_valid
+      @response.validation_error.should match(/somethingold/)
+    end
+
     it "should not be able to decrypt without the proper key" do
       @settings.xmlsec_privatekey = fixture_path("wrong-key.pem")
       XMLSecurity.mute do
