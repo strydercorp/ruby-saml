@@ -3,7 +3,7 @@ module Onelogin::Saml
 
     attr_accessor :settings
     attr_reader :document, :xml, :response
-    attr_reader :name_id, :name_qualifier, :session_index, :saml_attributes
+    attr_reader :name_id, :name_identifier_format, :name_qualifier, :sp_name_qualifier, :session_index, :saml_attributes
     attr_reader :status_code, :status_message
     attr_reader :in_response_to, :destination, :issuer
     attr_reader :validation_error
@@ -38,7 +38,9 @@ module Onelogin::Saml
       @status_message = untrusted_find_first("/samlp:Response/samlp:Status/samlp:StatusCode").content rescue nil
 
       @name_id        = trusted_find_first("saml:Assertion/saml:Subject/saml:NameID").content rescue nil
+      @name_identifier_format = trusted_find_first("saml:Assertion/saml:Subject/saml:NameID")["Format"] rescue nil
       @name_qualifier = trusted_find_first("saml:Assertion/saml:Subject/saml:NameID")["NameQualifier"] rescue nil
+      @sp_name_qualifier = trusted_find_first("saml:Assertion/saml:Subject/saml:NameID")["SPNameQualifier"] rescue nil
       @session_index  = trusted_find_first("saml:Assertion/saml:AuthnStatement")["SessionIndex"] rescue nil
 
       @saml_attributes = {}

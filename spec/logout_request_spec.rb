@@ -28,13 +28,17 @@ describe Onelogin::Saml::LogoutRequest do
   end
 
   let(:name_qualifier) { 'foo' }
+  let(:sp_name_qualifier) { 'foo' }
   let(:name_id) { 'bar'}
+  let(:name_identifier_format) { Onelogin::Saml::NameIdentifiers::UNSPECIFIED }
   let(:session_index) { 'baz' }
 
   let(:logout_request) do
     Onelogin::Saml::LogoutRequest::generate(
       name_qualifier,
+      sp_name_qualifier,
       name_id,
+      name_identifier_format,
       session_index,
       settings
     )
@@ -52,13 +56,29 @@ describe Onelogin::Saml::LogoutRequest do
     logout_xml.at_xpath('/samlp:LogoutRequest/saml:NameID', Onelogin::NAMESPACES)['Format'].should == Onelogin::Saml::NameIdentifiers::UNSPECIFIED
   end
 
+  it "does not include attribues when they are nil" do
+    logout_request = Onelogin::Saml::LogoutRequest::generate(
+      nil,
+      nil,
+      name_id,
+      nil,
+      session_index,
+      settings
+    )
+    logout_xml = Nokogiri::XML(logout_request.xml)
+    name_id_elem = logout_xml.at_xpath('/samlp:LogoutRequest/saml:NameID', Onelogin::NAMESPACES)
+    name_id_elem['NameQualifier'].should == nil
+    name_id_elem['SPNameQualifier'].should == nil
+    name_id_elem['NameIdentifierFormat'].should == nil
+  end
+
   it "does not include the signature in the request xml" do
     logout_xml = Nokogiri::XML(logout_request.xml)
     logout_xml.at_xpath('/samlp:LogoutRequest/ds:Signature', Onelogin::NAMESPACES).should be_nil
   end
 
   it "can sign the generated query string" do
-    expect(verify_query_string_signature(settings, forward_url)).to be_true
+    expect(verify_query_string_signature(settings, forward_url)).to eq true
   end
 
   it "properly signs when the IDP URL already contains a query string" do
@@ -69,9 +89,14 @@ describe Onelogin::Saml::LogoutRequest do
       :idp_cert_fingerprint => 'def18dbed547cdf3d52b627f41637c443045fe33',
       :name_identifier_format => Onelogin::Saml::NameIdentifiers::UNSPECIFIED
     )
-    request = Onelogin::Saml::LogoutRequest.generate(name_qualifier, name_id, session_index, settings)
+    request = Onelogin::Saml::LogoutRequest.generate(name_qualifier,
+                                                     sp_name_qualifier,
+                                                     name_id,
+                                                     name_identifier_format,
+                                                     session_index,
+                                                     settings)
     expect(request.forward_url).to match(%r{^http://idp.example.com/saml2\?existing=param\&existing=param&})
-    expect(verify_query_string_signature(settings, request.forward_url)).to be_true
+    expect(verify_query_string_signature(settings, request.forward_url)).to eq true
   end
 
   it "parses a logout request" do
